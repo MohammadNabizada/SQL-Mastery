@@ -29,3 +29,30 @@ Documenting my **45-day challenge** to master SQL through:
 📝 **Notes**:  
 > "Learning instalation of MYSQL."  
 
+
+# MySQL 8.0 Installation
+
+*Step 1: Searching MySql downloader, dowanload and install on your computer *
+
+![Version Selection](1.png)  
+*Step 2: Selecting MySQL 8.0.41 version and Windows 32-bit installer*
+
+---
+
+![Download Components](2.png)  
+*Step 3: Downloading MySQL Server, Workbench, and related components*
+
+---
+
+![Server Configuration](3.png)  
+*Step 4: Configuring server for development environment*
+
+---
+
+![Server Connection](4.png)  
+*Step 5: Verifying server connection with root credentials*
+
+## Post-Installation
+- Verify installation with `mysql --version`
+- Launch MySQL Workbench to test connections
+- Default port: 3306 (TCP/IP enabled)
