@@ -32,7 +32,7 @@ Documenting my **45-day challenge** to master SQL through:
 
 # MySQL 8.0 Installation
 
-*Step 1: Searching MySql downloader, dowanload and install on your computer *
+*Step 1: Searching MySql downloader, dowanload and install on your computer*
 
 
 
