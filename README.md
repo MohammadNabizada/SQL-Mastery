@@ -75,3 +75,10 @@ Documenting my **45-day challenge** to master SQL through:
 - Verify installation with `mysql --version`
 - Launch MySQL Workbench to test connections
 - Default port: 3306 (TCP/IP enabled)
+
+
+
+
+### **Day 2: Creating the Databases and SELECT Statement**  
+📝 **Notes**:  
+> "Database and SELECT Statement" 
