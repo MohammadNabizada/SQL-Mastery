@@ -89,3 +89,39 @@ This query retrieves all records from  `TABLENAME` table in the `DATABASENAME` d
 ```sql
 -- Select all columns from the products table
 SELECT * FROM DATABASENAME.TABLENAME;
+
+# SQL Query Template
+
+## Basic Query Structure
+USE database_name;  -- Sets the active database
+SELECT * FROM table_name 
+WHERE column_name = 1  -- Filter condition
+ORDER BY column_name;  -- Sorting
+```
+
+## Command Reference
+| Command     | Description                          | Example                  |
+|-------------|--------------------------------------|--------------------------|
+| `USE`       | Selects the database                 | `USE sql_inventory;`     |
+| `SELECT *`  | Retrieves all columns                | `SELECT * FROM products;`|
+| `WHERE`     | Filters records                      | `WHERE id = 1`           |
+| `ORDER BY`  | Sorts results (ASC by default)       | `ORDER BY price DESC;`   |
+
+## Usage Notes
+1. Replace placeholders (`database_name`, `table_name`, etc.) with your actual names
+2. For production, specify columns instead of using `SELECT *`
+3. The semicolon (`;`) terminates each statement
+
+## Quick Examples
+**Connection Test:**
+```sql
+SELECT 1, 2;  -- Basic connection check
+```
+
+**Filtered Query:**
+```sql
+USE shop_db;
+SELECT name, price FROM products
+WHERE stock > 0
+ORDER BY price;
+```
