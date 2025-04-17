@@ -82,3 +82,10 @@ Documenting my **45-day challenge** to master SQL through:
 ### **Day 2: Creating the Databases and SELECT Statement**  
 📝 **Notes**:  
 > "Database and SELECT Statement" 
+## SQL Query Example
+
+This query retrieves all records from  `TABLENAME` table in the `DATABASENAME` database:
+
+```sql
+-- Select all columns from the products table
+SELECT * FROM DATABASENAME.TABLENAME;
