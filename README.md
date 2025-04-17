@@ -19,7 +19,7 @@ Documenting my **45-day challenge** to master SQL through:
 | **Course Name**  | [SQL]               |
 | **Platform**     | Udemy/Coursera/YouTube              |
 | **Instructor**   | [Instructor Name]                   |
-| **Tools Used**   | PostgreSQL, MySQL Workbench, Jupyter|
+| **Tools Used**   |  MySQL Workbench,|
 | **My Level**     | Beginner → Intermediate -> advanced |
 
 ---
