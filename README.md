@@ -125,3 +125,75 @@ SELECT name, price FROM products
 WHERE stock > 0
 ORDER BY price;
 ```
+
+
+### **Day 3: Querying Data with SELECT Statements**
+
+#### **1. Basic Column Selection with Calculation**
+```sql
+SELECT column1, column2, (column2 * 1.1) AS 'calculated_column'
+FROM table
+```
+- **Purpose**: Retrieve specific columns with a calculated value
+- **Key Features**:
+  - Explicit column selection (`column1`, `column2`)
+  - 10% calculation on `column2`
+  - Column aliasing with `AS` for readability
+- **Use Case**: Price adjustments, derived metrics
+
+#### **2. Date-Based Filtering (After Specific Date)**
+```sql
+SELECT *
+FROM table
+WHERE date_column > 'YYYY-MM-DD'
+```
+- **Purpose**: Filter records chronologically
+- **Key Features**:
+  - `*` selects all columns
+  - `>` operator for dates after specified date
+- **Use Case**: Finding recent transactions, active users
+
+#### **3. Date Range Selection**
+```sql
+SELECT *
+FROM table
+WHERE date_column >= 'YYYY-MM-DD'
+```
+- **Purpose**: Get records from a certain point forward
+- **Key Features**:
+  - `>=` includes the boundary date
+  - Standard ISO date format
+- **Use Case**: Fiscal year reporting, anniversary tracking
+
+#### **4. Advanced Conditional Filtering**
+```sql
+SELECT *
+FROM table
+WHERE condition1 > 'YYYY-MM-DD' OR 
+(condition2 > threshold AND condition3 = 'value')
+```
+- **Purpose**: Complex record filtering
+- **Key Features**:
+  - Combined `AND`/`OR` logic
+  - Parentheses control evaluation order
+- **Use Case**: Targeted marketing, exception reporting
+
+#### **5. Exclusion Filtering**
+```sql
+SELECT *
+FROM table
+WHERE column NOT IN ('value1','value2','value3')
+```
+- **Purpose**: Exclude specific values
+- **Key Features**:
+  - Clean alternative to multiple `!=` conditions
+  - Works with any data type
+- **Use Case**: Regional exceptions, category filters
+
+#### **Pro Tips**:
+1. Always test date filters with sample data
+2. For calculations, consider NULL handling with `COALESCE`
+3. Complex conditions benefit from line breaks for readability
+4. `NOT IN` performs best with small value lists
+
+> "The SELECT statement is the Swiss Army knife of SQL - master it and you unlock the power of your data." - Database Proverb
