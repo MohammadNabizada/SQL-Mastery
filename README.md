@@ -197,3 +197,113 @@ WHERE column NOT IN ('value1','value2','value3')
 4. `NOT IN` performs best with small value lists
 
 > "The SELECT statement is the Swiss Army knife of SQL - master it and you unlock the power of your data." - Database Proverb
+
+
+
+
+
+### **Day 4: BETWEEN, REGEXP, IS NULL, ORDER BY**
+
+
+
+# 🐘 SQL Query Snippets — `customers` Table
+
+This repository includes a set of practical SQL queries for selecting, filtering, sorting, and manipulating data from a `customers` table.
+
+These queries are great for learning and practicing SQL basics such as `BETWEEN`, `LIKE`, `REGEXP`, `ORDER BY`, and more.
+
+---
+
+
+# SQL Query Basics
+
+This guide covers fundamental SQL `SELECT` queries for filtering, pattern matching, sorting, and manipulating data in a database table.
+
+## 1. Filtering with `BETWEEN`
+Retrieve rows where a numeric column's value falls within a specified range (inclusive).
+```sql
+SELECT *
+FROM table_name
+WHERE column_name BETWEEN 1000 AND 3000;
+```
+
+Retrieve rows where a date column falls within a specified date range.
+```sql
+SELECT *
+FROM table_name
+WHERE date_column BETWEEN '1990-01-01' AND '2000-01-01';
+```
+
+## 2. Pattern Matching with `LIKE`
+Filter rows based on string patterns. The `%` wildcard matches any number of characters, and `_` matches a single character.
+```sql
+SELECT *
+FROM table_name
+WHERE column_name LIKE '%y'; -- Ends with 'y'
+```
+
+```sql
+SELECT *
+FROM table_name
+WHERE column_name LIKE '_____y'; -- Exactly 5 characters before 'y'
+```
+
+## 3. Pattern Matching with `REGEXP`
+Use regular expressions to match complex string patterns. For example, match strings containing specific characters followed by a particular letter.
+```sql
+SELECT *
+FROM table_name
+WHERE column_name REGEXP '[a-c]e'; -- Matches strings with 'ae', 'be', or 'ce'
+```
+- `^`: Start of string
+- `$`: End of string
+- `|`: Logical OR
+- `[abcd]`: Matches any single character (a, b, c, or d)
+- `[a-f]`: Matches any character in the range a to f
+
+## 4. Checking for `NULL` Values
+Retrieve rows where a column contains `NULL`.
+```sql
+SELECT *
+FROM table_name
+WHERE column_name IS NULL;
+```
+
+## 5. Sorting with `ORDER BY`
+Sort query results by one or more columns. Use `ASC` (default) for ascending or `DESC` for descending order.
+```sql
+SELECT *
+FROM table_name
+ORDER BY column1, column2 DESC; -- Sort by column1 (ASC), then column2 (DESC)
+```
+
+Sort by a single column, such as a date.
+```sql
+SELECT column1, column2
+FROM table_name
+ORDER BY date_column;
+```
+
+## 6. Adding Calculated Columns
+Create a constant column with a fixed value in the result set.
+```sql
+SELECT column1, column2, 10 AS points
+FROM table_name
+ORDER BY points, column1;
+```
+
+## 7. Sorting by Column Position
+Refer to columns by their position in the `SELECT` clause (1-based indexing) for sorting.
+```sql
+SELECT column1, column2, 10 AS points
+FROM table_name
+ORDER BY 1, 2; -- Sort by column1, then column2
+```
+
+## Key Points
+- Use `BETWEEN` for range-based filtering (numbers or dates).
+- Use `LIKE` for simple string pattern matching and `REGEXP` for advanced patterns.
+- Use `IS NULL` to find missing values.
+- Use `ORDER BY` to sort results, with optional `ASC`/`DESC` and column position references.
+- Add calculated columns with aliases (e.g., `AS points`) for clarity.
+
