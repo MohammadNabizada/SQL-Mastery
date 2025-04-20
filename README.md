@@ -307,3 +307,111 @@ ORDER BY 1, 2; -- Sort by column1, then column2
 - Use `ORDER BY` to sort results, with optional `ASC`/`DESC` and column position references.
 - Add calculated columns with aliases (e.g., `AS points`) for clarity.
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Query 1: Basic Result Limiting
+sql
+
+SELECT *
+FROM customers
+LIMIT 4
+
+    Purpose: Retrieve a limited number of records
+
+    Key Features:
+
+        LIMIT 4 returns only the first 4 rows
+
+        Useful for previewing data without loading entire tables
+
+    Use Case: Quick data sampling, dashboard previews
+
+    Performance: Reduces memory usage for large datasets
+
+Query 2: Offset Limiting (Pagination)
+sql
+
+SELECT *
+FROM customers
+LIMIT 6,3
+
+    Purpose: Implement pagination or skip initial records
+
+    Key Features:
+
+        LIMIT 6,3 skips 6 rows, then returns next 3 rows
+
+        Alternative syntax: LIMIT 3 OFFSET 6
+
+    Use Case: Web application pagination, batch processing
+
+    Note: First number is offset, second is row count
+
+Query 3: Table Join with Column Selection
+sql
+
+SELECT order_id, o.customer_id, first_name, last_name
+FROM orders o
+JOIN customers c
+     ON o.customer_id = c.customer_id
+
+    Purpose: Combine related data from multiple tables
+
+    Key Features:
+
+        Explicit column selection (avoids ambiguous *)
+
+        Table aliases (o and c) for readability
+
+        INNER JOIN matches records from both tables
+
+    Use Case: Generating complete order reports with customer details
+
+    Best Practice:
+
+        Always qualify column names in joins (o.customer_id)
+
+        Select only needed columns (not *) for better performance
+
+Pro Tips:
+
+    Use LIMIT when developing queries to test results quickly
+
+    For pagination, consider newer syntax: LIMIT 3 OFFSET 6
+
+    Always specify join conditions to avoid Cartesian products
+
+    Table aliases make complex queries more readable
+
+    "Well-written joins are the bridges that connect your data islands." - Database Architect's Proverb
+
+Each explanation follows your requested format with:
+
+    Clear purpose statements
+
+    Key technical features
+
+    Practical use cases
+
+    Performance considerations
+
+    Best practice notes
+
+    Professional formatting
