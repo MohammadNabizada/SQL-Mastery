@@ -446,3 +446,117 @@ This version:
 - Preserves professional formatting
 
 
+### **Day 6: INNER JOIN, OUTER JOIN**
+
+# SQL JOIN Operations Reference
+
+## Core JOIN Patterns
+
+### 1. Basic INNER JOIN
+```sql
+SELECT *
+FROM primary_table pt
+JOIN related_table rt ON pt.key_field = rt.foreign_key
+```
+
+Purpose: Retrieve only matching records from both tables
+Characteristics:
+
+    Most common JOIN type
+
+    Returns only rows satisfying the join condition
+
+    Use for standard relational queries
+
+2. Multi-Table JOIN
+
+```sql SELECT *
+FROM table1 t1
+JOIN table2 t2 ON t1.key = t2.foreign_key
+JOIN table3 t3 ON t2.other_key = t3.relation_key
+```
+
+Purpose: Combine data from three or more related tables
+Note:
+
+    Chain multiple JOIN clauses
+
+    Table aliases become essential
+
+3. LEFT OUTER JOIN
+
+```sql SELECT *
+FROM main_table mt
+LEFT JOIN secondary_table st ON mt.id = st.ref_id
+```
+Purpose: Retrieve all main records plus optional related data
+Key Behavior:
+
+    Returns ALL rows from left table
+
+    NULL values for unmatched right table columns
+
+    Essential for "show all with optional details" scenarios
+
+4. RIGHT OUTER JOIN
+
+
+```sql SELECT *
+FROM reference_table rt
+RIGHT JOIN primary_table pt ON rt.id = pt.ref_id
+```
+
+Purpose: Get all right table records with optional left matches
+Note:
+
+    Can usually be rewritten as LEFT JOIN
+
+    Less commonly used than LEFT JOIN
+
+JOIN Comparison Matrix
+Operation	Syntax	Returns	Typical Use Case
+INNER JOIN	JOIN	Matching rows only	Standard relational queries
+LEFT JOIN	LEFT JOIN	All left + matches	Preserve primary records
+RIGHT JOIN	RIGHT JOIN	All right + matches	Rare edge cases
+FULL JOIN	FULL JOIN	All records from both	Complete relationship analysis
+Best Practices
+
+    Always:
+
+```sql -- Use explicit JOIN syntax
+SELECT t1.field1, t2.field2
+FROM table1 t1
+JOIN table2 t2 ON t1.id = t2.t1_id
+```
+Avoid:
+```sql
+
+-- Implicit JOINs (comma syntax)
+SELECT * FROM table1, table2 WHERE table1.id = table2.t1_id
+```
+
+Optimize:
+```sql
+
+-- Filter early in JOIN conditions
+SELECT t1.*, t2.*
+FROM table1 t1
+JOIN table2 t2 ON t1.id = t2.t1_id AND t2.status = 'active'
+```
+
+Performance Considerations
+
+Create indexes on join columns
+
+Prefer WHERE filters over HAVING for join results
+
+Limit result sets before joining when possible:
+
+```sql
+
+WITH filtered AS (
+  SELECT * FROM large_table WHERE condition LIMIT 100
+)
+SELECT * FROM filtered JOIN other_table...
+```
+
