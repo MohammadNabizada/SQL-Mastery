@@ -560,3 +560,41 @@ WITH filtered AS (
 SELECT * FROM filtered JOIN other_table...
 ```
 
+# SQL JOIN Operations Guide
+
+## 1. Implicit INNER JOIN (Legacy Syntax)
+```sql
+SELECT *
+FROM child_table ct, parent_table pt
+WHERE pt.parent_id = ct.foreign_key
+```
+
+Purpose: Basic table joining (historical approach)
+Characteristics:
+
+    Comma-separated tables in FROM clause
+
+    Join condition in WHERE clause
+
+    Functionally equivalent to INNER JOIN
+    Modern Best Practice:
+
+
+    SELECT *
+FROM child_table ct
+JOIN parent_table pt ON ct.foreign_key = pt.parent_id
+
+```sql SELECT *
+FROM child_table ct
+JOIN parent_table pt ON ct.foreign_key = pt.parent_id
+```
+
+2. LEFT OUTER JOIN
+
+   ```sql SELECT pt.primary_id, pt.name, ct.child_value
+FROM primary_table pt
+LEFT JOIN child_table ct
+    ON pt.primary_id = ct.foreign_key
+ORDER BY pt.primary_id
+```
+
