@@ -742,6 +742,179 @@ sql``` SELECT * FROM A JOIN B ON A.key = B.key ```
 -- LEFT JOIN
 sql``` SELECT * FROM A LEFT JOIN B ON A.key = B.key ```
 
+
+
+
+## 1. Joining Tables
+### NATURAL JOIN
+```sql
+SELECT 
+    t1.id,
+    t2.name
+FROM table1 t1
+NATURAL JOIN table2 t2
+```
+**Purpose**: Retrieves `id` from the first table and `name` from the second table using a `NATURAL JOIN`.  
+**Review**: This query joins two tables based on columns with identical names (e.g., a shared `id`). While concise, `NATURAL JOIN` can be risky in production as it assumes matching column names, which may lead to unintended joins if schemas change. Explicit `JOIN ... ON` syntax is often preferred for clarity and control.
+
+### CROSS JOIN (Explicit and Implicit)
+```sql
+SELECT t2.name AS entity, t3.item AS product
+FROM table2 t2
+CROSS JOIN table3 t3
+
+SELECT t2.name AS entity, t3.item AS product
+FROM table2 t2, table3 t3
+ORDER BY t2.name
+```
+**Purpose**: These queries produce a Cartesian product, pairing every row from the second table with every row from the third table. The second query includes an `ORDER BY` to sort results by `name`.  
+**Review**: Both snippets achieve the same result, with the first using explicit `CROSS JOIN` syntax and the second using an implicit comma-based join. The explicit syntax is more readable and modern. Adding `ORDER BY` in the second query enhances usability by organizing output. Use `CROSS JOIN` cautiously, as it can generate large result sets.
+
+### CROSS JOIN with Another Table
+```sql
+SELECT t4.id AS id, t3.item AS product_name
+FROM table4 t4
+CROSS JOIN table3 t3
+
+SELECT t4.id AS id, t3.item AS product_name
+FROM table4 t4, table3 t3
+```
+**Purpose**: Pairs every `id` from the fourth table with every `item` from the third table.  
+**Review**: These snippets mirror the previous `CROSS JOIN`, demonstrating consistency in joining unrelated tables. The aliasing (`id`, `product_name`) improves readability. The explicit `CROSS JOIN` is preferred for clarity, but both are functionally equivalent. Ensure the result set size is manageable in real-world applications.
+
+## 2. Combining Data with UNION
+### Active and Archived Records
+```sql
+SELECT id, date, 'Active' AS status
+FROM table1
+WHERE date >= '2019-01-01'
+UNION
+SELECT id, date, 'Archived' AS status
+FROM table1
+WHERE date < '2019-01-01'
+```
+**Purpose**: Combines two result sets from the first table, labeling records from 2019 or later as "Active" and earlier as "Archived".  
+**Review**: The `UNION` operator removes duplicates, ensuring a clean result set. This query is excellent for categorizing data based on a condition (date). Using a constant (`'Active'`, `'Archived'`) as a derived column adds context. Ensure column types match across `UNION` queries to avoid errors.
+
+### Combining Names from Two Tables
+```sql
+SELECT name
+FROM table2
+UNION 
+SELECT name 
+FROM table4
+```
+**Purpose**: Merges unique `name` values from the second and fourth tables.  
+**Review**: This `UNION` combines single-column results, removing duplicates. It’s useful for generating a unified list of names from different entities. Be cautious with column name consistency; renaming one for clarity (e.g., using `AS`) could improve readability.
+
+### Tiered Categorization
+```sql
+SELECT id, name, score, 'Gold' AS type
+FROM table2
+WHERE score >= 3000
+UNION
+SELECT id, name, score, 'Silver' AS type
+FROM table2
+WHERE score BETWEEN 2000 AND 3000
+UNION
+SELECT id, name, score, 'Bronze' AS type
+FROM table2
+WHERE score < 2000
+ORDER BY score DESC
+```
+**Purpose**: Categorizes records into "Gold," "Silver," or "Bronze" tiers based on `score`, sorting results by score in descending order.  
+**Review**: This query elegantly segments data using `UNION` and conditions. The `ORDER BY score DESC` applies to the entire result set, making it user-friendly. Descriptive aliases (`type`) enhance readability. Ensure `score` is indexed for performance in large datasets.
+
+## 3. Inserting Data
+### Inserting into a Table
+```sql
+INSERT INTO table2
+VALUES (DEFAULT, 'ali', 'nabi', '1990-01-01', NULL, 'address', 'city', 'CA', DEFAULT)
+
+INSERT INTO table2 (first_name, last_name, birth_date, address, city, state)
+VALUES ('ali', 'nabi', '1990-01-01', 'address', 'city', 'CA')
+```
+**Purpose**: Adds a new record to the second table, using both full-column and selective-column `INSERT` statements.  
+**Review**: The first query uses `DEFAULT` for auto-generated fields (e.g., `id`), ideal for tables with auto-incrementing keys. The second query explicitly lists columns, which is safer and more maintainable if the schema changes. Both are valid, but the second is preferred for clarity and robustness.
+
+### Inserting Multiple Records
+```sql
+INSERT INTO table4 (name)
+VALUES ('entity1'), ('entity2'), ('entity3')
+```
+**Purpose**: Inserts three records into the fourth table.  
+**Review**: This multi-row `INSERT` is efficient, reducing database round-trips. Specifying only the `name` column is appropriate if other columns have defaults or are nullable. Ensure the `name` column allows unique values if required by the schema.
+
+### Inserting Items
+```sql
+INSERT INTO table3 (id, name, quantity, price)
+VALUES (DEFAULT, 'item1', 230, 1), (DEFAULT, 'item2', 12, 2), (DEFAULT, 'item3', 76, 3)
+```
+**Purpose**: Adds three items to the third table with specified quantities and prices.  
+**Review**: Using `DEFAULT` for `id` supports auto-incrementing primary keys. The multi-row insert is efficient, and the values are well-structured. Consider adding error handling (e.g., checking for duplicate names) in production.
+
+### Inserting Related Records
+```sql
+INSERT INTO table1 (ref_id, date, status)
+VALUES (1, '2019-01-02', 1);
+INSERT INTO table5
+VALUES (LAST_INSERT_ID(), 1, 1, 2.95), (LAST_INSERT_ID(), 2, 1, 3.95)
+```
+**Purpose**: Creates a new record in the first table and associates two items with it in a related table, using the generated `id`.  
+**Review**: The use of `LAST_INSERT_ID()` ensures items are linked to the new record, maintaining referential integrity. This is a great example of handling parent-child relationships. Ensure `ref_id` exists to avoid foreign key violations.
+
+## 4. Archiving Data
+### Creating an Archive Table
+```sql
+CREATE TABLE table1_archived AS
+SELECT * FROM table1
+
+INSERT INTO table1_archived
+SELECT * FROM table1
+WHERE date < '2019-01-01'
+```
+**Purpose**: Creates a new archive table with the same structure as the first table and populates it with pre-2019 records.  
+**Review**: The `CREATE TABLE ... AS` statement is a concise way to duplicate table structure and data. The subsequent `INSERT` filters for older records, useful for archiving. Be aware that `SELECT *` may include unnecessary columns; explicitly listing columns can improve clarity and performance.
+
+### Creating a Selective Archive
+```sql
+CREATE TABLE archive_table
+SELECT 
+    t6.record_id,
+    t6.number,
+    t7.name AS entity,
+    t6.total,
+    t6.payment_total,
+    t6.record_date,
+    t6.payment_date,
+    t6.due_date
+FROM table6 t6
+JOIN table7 t7
+USING (shared_id)
+WHERE t6.payment_date IS NOT NULL
+```
+**Purpose**: Creates an archive table with selected columns from two tables, including only records with a payment date.  
+**Review**: This query demonstrates practical archiving, joining two tables using the `USING` clause for a shared `id`. Filtering by `payment_date IS NOT NULL` ensures only paid records are archived. Explicitly listing columns (instead of `SELECT *`) is a best practice, improving maintainability and performance.
+
+## Summary
+These SQL snippets showcase a range of operations: joining tables, combining result sets, inserting data, and archiving. They are well-structured for learning and demonstration, with clear use of aliases, conditions, and modern syntax. For production use, consider:
+- Replacing `NATURAL JOIN` with explicit `JOIN ... ON`.
+- Adding indexes for frequently filtered columns (e.g., `date`, `score`).
+- Validating foreign keys and unique constraints during inserts.
+- Using explicit column lists in `SELECT *` queries for archiving.
+
+This collection is an excellent addition to a GitHub repository, demonstrating proficiency in SQL for data manipulation and management.
+
+
+
+
+
+
+
+
+
+
+
 -- CROSS JOIN
 ```sql SELECT * FROM A CROSS JOIN B ```
 
