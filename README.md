@@ -921,4 +921,4 @@ This collection is an excellent addition to a GitHub repository, demonstrating p
 -- SELF JOIN
 ```sqlSELECT * FROM TableA a1 JOIN TableA a2 ON a1.key = a2.key
 
-
+find
