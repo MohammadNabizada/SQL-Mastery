@@ -919,6 +919,81 @@ This collection is an excellent addition to a GitHub repository, demonstrating p
 ```sql SELECT * FROM A CROSS JOIN B ```
 
 -- SELF JOIN
-```sqlSELECT * FROM TableA a1 JOIN TableA a2 ON a1.key = a2.key
+```sqlSELECT * FROM TableA a1 JOIN TableA a2 ON a1.key = a2.key```
+# SQL Update Operations Showcase
 
-find
+This project demonstrates various SQL `UPDATE` statements to modify data in the `sql_invoicing` and `sql_store` databases, showcasing practical database management tasks like payment adjustments, loyalty rewards, and customer tagging. Below are the key operations with explanations.
+
+## Code and Explanations
+
+### 1. Update Specific Invoice Payment
+```sql
+USE sql_invoicing;
+UPDATE invoices
+SET payment_total = 10, payment_date = '2020-03-01'
+WHERE invoice_id = 1;
+```
+- **Purpose**: Records a $10 payment on March 1, 2020, for invoice ID 1.
+
+### 2. Reset Invoice Payment to Defaults
+```sql
+USE sql_invoicing;
+UPDATE invoices
+SET payment_total = DEFAULT, payment_date = DEFAULT
+WHERE invoice_id = 1;
+```
+- **Purpose**: Resets payment fields to default values (e.g., 0 or NULL) for invoice ID 1.
+
+### 3. Adjust Payment for Invoice
+```sql
+USE sql_invoicing;
+UPDATE invoices
+SET payment_total = payment_total * 0.5, payment_date = due_date
+WHERE invoice_id = 3;
+```
+- **Purpose**: Halves the payment total and sets the payment date to the due date for invoice ID 3.
+
+### 4. Update Invoices for Specific Clients
+```sql
+SET SQL_SAFE_UPDATES = 0;
+USE sql_invoicing;
+UPDATE invoices
+SET payment_total = invoice_total * 0.5, payment_date = due_date
+WHERE client_id IN (3, 4);
+```
+- **Purpose**: Applies a 50% payment reduction and aligns payment with due date for clients 3 and 4, after disabling safe mode.
+
+### 5. Reward Loyal Customers
+```sql
+USE sql_store;
+UPDATE customers
+SET points = points + 50
+WHERE birth_date < '1990-01-01';
+```
+- **Purpose**: Adds 50 loyalty points to customers born before 1990.
+
+### 6. Regional Invoice Adjustments
+```sql
+USE sql_invoicing;
+UPDATE invoices
+SET payment_total = invoice_total * 0.5, payment_date = due_date
+WHERE client_id IN (
+    SELECT client_id
+    FROM clients
+    WHERE state IN ('CA', 'NY')
+);
+```
+- **Purpose**: Reduces payment by 50% and sets payment date to due date for clients in CA or NY.
+
+### 7. Tag Gold Customers
+```sql
+UPDATE orders
+SET comments = 'Gold customer'
+WHERE customer_id IN (
+    SELECT customer_id
+    FROM customers
+    WHERE points > 3000
+);
+```
+- **Purpose**: Marks orders from customers with over 3000 points as “Gold customer.”
+
