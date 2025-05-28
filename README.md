@@ -997,3 +997,277 @@ WHERE customer_id IN (
 ```
 - **Purpose**: Marks orders from customers with over 3000 points as “Gold customer.”
 
+
+
+
+
+# SQL Code Review
+
+This document provides a detailed review of the provided SQL code, evaluating correctness, clarity, potential issues, and suggestions for improvement. Each query is analyzed separately with corrected versions where applicable.
+
+## DELETE FROM Invoices with Subquery
+```sql
+DELETE FROM invoices
+WHERE client_id = 
+(SELECT *
+FROM clients 
+WHERE name = 'Myworks')
+```
+
+### Review
+- **Issue**: The subquery `SELECT *` is incorrect because a subquery in a `WHERE` clause with `=` must return a single column and row. Using `SELECT *` returns all columns, causing a syntax error.
+- **Potential Risk**: If multiple clients have the name 'Myworks', the subquery could return multiple rows, leading to a runtime error.
+- **Clarity**: The intent to delete invoices for a client named 'Myworks' is clear, but the syntax is flawed.
+- **Suggestion**:
+  - Use `SELECT client_id` instead of `SELECT *` to return only the `client_id` column.
+  - Use `IN` instead of `=` to handle multiple matching clients.
+  - Add `LIMIT 1` in the subquery if only one client is expected, or verify that `name` is unique in the `clients` table.
+
+### Corrected Code
+```sql
+DELETE FROM invoices
+WHERE client_id IN 
+(SELECT client_id
+FROM clients 
+WHERE name = 'Myworks')
+```
+
+## Database Restoration Note
+```sql
+RESTORING THE DATABASE
+```
+
+### Review
+- **Issue**: This is not a valid SQL statement, likely a comment or note rather than executable code.
+- **Potential Risk**: If intended as a restoration command (e.g., restoring from a backup), it lacks proper syntax (e.g., `RESTORE DATABASE` in SQL Server or `mysql` command for MySQL).
+- **Clarity**: The intent is unclear without context, possibly a placeholder for a database restoration process.
+- **Suggestion**:
+  - Use proper SQL comment syntax (e.g., `--` or `/* */`) if this is a comment.
+  - If restoration is intended, provide the correct command for the database system.
+  - Example for MySQL:
+    ```sql
+    -- Restore database (example for MySQL)
+    -- mysql -u username -p sql_invoicing < backup.sql
+    ```
+
+## Aggregate Queries on Invoices
+
+### Maximum, Minimum, and Average Invoice Totals
+```sql
+USE sql_invoicing;
+SELECT MAX(invoice_total) AS highest,
+       MIN(invoice_total) AS lowest,
+       AVG(invoice_total) AS average
+FROM invoices
+```
+
+#### Review
+- **Correctness**: The query correctly calculates the maximum, minimum, and average of `invoice_total` from the `invoices` table.
+- **Clarity**: The query is clear and concise, with descriptive column aliases.
+- **Potential Issue**: No filtering condition is applied, so it processes all rows, which is fine if intended but may impact performance on large datasets.
+- **Suggestion**:
+  - Add a `WHERE` clause if analysis should be limited to a specific period or condition.
+  - If `invoice_total` can be `NULL`, clarify whether to exclude `NULL` values (e.g., `WHERE invoice_total IS NOT NULL`).
+
+### Detailed Invoice Statistics After July 2019
+```sql
+USE sql_invoicing;
+SELECT MAX(payment_date) AS highest,
+       MIN(payment_date) AS lowest,
+       AVG(payment_date) AS average,
+       SUM(invoice_total) AS total,
+       COUNT(invoice_total * 1.1) AS number_of_invoices,
+       COUNT(payment_date) AS count_of_payment,
+       COUNT(*) AS total_records
+FROM invoices
+WHERE invoice_date > '2019-07-01'
+```
+
+#### Review
+- **Issue**: The `AVG(payment_date)` is problematic, as averaging a `DATE` or `DATETIME` column is not meaningful and may cause errors or unexpected results.
+- **Correctness**: Other aggregates (`MAX`, `MIN`, `SUM`, `COUNT`) are correct, assuming valid column types.
+- **Clarity**: Aliases are descriptive, but `number_of_invoices` for `COUNT(invoice_total * 1.1)` is misleading, as it counts non-`NULL` rows where the calculation is performed, not necessarily invoices.
+- **Potential Risk**: `NULL` values in `payment_date` or `invoice_total` may skew `COUNT` results.
+- **Suggestion**:
+  - Remove `AVG(payment_date)` or replace it with a meaningful metric (e.g., average days between `invoice_date` and `payment_date`).
+  - Clarify `COUNT(invoice_total * 1.1)`; use `COUNT(*)` or `COUNT(invoice_id)` for invoice counts.
+  - Example correction:
+    ```sql
+    SELECT MAX(payment_date) AS latest_payment,
+           MIN(payment_date) AS earliest_payment,
+           SUM(invoice_total) AS total,
+           COUNT(*) AS number_of_invoices,
+           COUNT(payment_date) AS count_of_payments,
+           COUNT(*) AS total_records
+    FROM invoices
+    WHERE invoice_date > '2019-07-01'
+    ```
+
+### Client-Based Invoice Statistics After July 2019
+```sql
+USE sql_invoicing;
+SELECT MAX(payment_date) AS highest,
+       MIN(payment_date) AS lowest,
+       AVG(payment_date) AS average,
+       SUM(invoice_total) AS total,
+       COUNT(invoice_total * 1.1) AS number_of_invoices,
+       COUNT(payment_date) AS count_of_payment,
+       COUNT(DISTINCT client_id) AS total_records
+FROM invoices
+WHERE invoice_date > '2019-07-01'
+```
+
+#### Review
+- **Issue**: As before, `AVG(payment_date)` is not meaningful and should be removed or replaced.
+- **Difference**: Uses `COUNT(DISTINCT client_id)` for `total_records`, counting unique clients instead of total rows.
+- **Clarity**: The alias `total_records` is misleading, as it counts distinct clients, not records.
+- **Suggestion**:
+  - Rename `total_records` to `distinct_clients` for clarity.
+  - Remove `AVG(payment_date)` or replace with a meaningful metric.
+  - Example correction:
+    ```sql
+    SELECT MAX(payment_date) AS latest_payment,
+           MIN(payment_date) AS earliest_payment,
+           SUM(invoice_total) AS total,
+           COUNT(*) AS number_of_invoices,
+           COUNT(payment_date) AS count_of_payments,
+           COUNT(DISTINCT client_id) AS distinct_clients
+    FROM invoices
+    WHERE invoice_date > '2019-07-01'
+    ```
+
+### Sales and Payments by Half-Year 2019
+```sql
+USE sql_invoicing;
+SELECT 
+      'First half of 2019' AS date_range,
+      SUM(invoice_total) AS total_sales,
+      SUM(payment_total) AS total_payment,
+      SUM(invoice_total - payment_total) AS what_we_expected
+FROM invoices
+WHERE invoice_date BETWEEN '2019-01-01' AND '2019-06-30'
+UNION
+SELECT 
+      'Soccond half of 2019' AS date_range,
+      SUM(invoice_total) AS total_sales,
+      SUM(payment_total) AS total_payment,
+      SUM(invoice_total - payment_total) AS what_we_expected
+FROM invoices
+WHERE invoice_date BETWEEN '2019-07-01' AND '2019-12-30'
+UNION 
+SELECT 
+      'Total' AS date_range,
+      SUM(invoice_total) AS total_sales,
+      SUM(payment_total) AS total_payment,
+      SUM(invoice_total - payment_total) AS what_we_expected
+FROM invoices
+WHERE invoice_date BETWEEN '2019-01-01' AND '2019-12-30'
+```
+
+#### Review
+- **Issue**: Typo in `'Soccond half of 2019'` (should be `'Second half of 2019'`).
+- **Correctness**: The query correctly uses `UNION` to combine results for two periods and a total. The `BETWEEN` clause is inclusive, which is appropriate.
+- **Clarity**: The alias `what_we_expected` is vague; it likely represents outstanding balances.
+- **Potential Risk**: `NULL` values in `invoice_total` or `payment_total` may skew results. Use `COALESCE` to handle `NULLs`.
+- **Suggestion**:
+  - Fix the typo to `'Second half of 2019'`.
+  - Rename `what_we_expected` to `outstanding_balance` for clarity.
+  - Use `COALESCE` for `NULL` handling.
+  - Example correction:
+    ```sql
+    USE sql_invoicing;
+    SELECT 
+          'First half of 2019' AS date_range,
+          SUM(COALESCE(invoice_total, 0)) AS total_sales,
+          SUM(COALESCE(payment_total, 0)) AS total_payments,
+          SUM(COALESCE(invoice_total, 0) - COALESCE(payment_total, 0)) AS outstanding_balance
+    FROM invoices
+    WHERE invoice_date BETWEEN '2019-01-01' AND '2019-06-30'
+    UNION
+    SELECT 
+          'Second half of 2019' AS date_range,
+          SUM(COALESCE(invoice_total, 0)) AS total_sales,
+          SUM(COALESCE(payment_total, 0)) AS total_payments,
+          SUM(COALESCE(invoice_total, 0) - COALESCE(payment_total, 0)) AS outstanding_balance
+    FROM invoices
+    WHERE invoice_date BETWEEN '2019-07-01' AND '2019-12-30'
+    UNION 
+    SELECT 
+          'Total' AS date_range,
+          SUM(COALESCE(invoice_total, 0)) AS total_sales,
+          SUM(COALESCE(payment_total, 0)) AS total_payments,
+          SUM(COALESCE(invoice_total, 0) - COALESCE(payment_total, 0)) AS outstanding_balance
+    FROM invoices
+    WHERE invoice_date BETWEEN '2019-01-01' AND '2019-12-30'
+    ```
+
+## Group By Queries
+
+### Total Sales by State and City
+```sql
+SELECT 
+   state,
+   city,
+   SUM(invoice_total) AS total_sales
+FROM invoices i
+JOIN clients USING(client_id)
+GROUP BY state, city
+```
+
+#### Review
+- **Correctness**: The query correctly joins `invoices` and `clients` using `client_id` and groups by `state` and `city` to calculate total sales.
+- **Clarity**: The `USING(client_id)` syntax is concise, assuming `client_id` is the common column name.
+- **Potential Issue**: `NULL` values in `state` or `city` will appear as a group. If undesirable, add `WHERE state IS NOT NULL AND city IS NOT NULL`.
+- **Suggestion**:
+  - Explicitly use `INNER JOIN` for clarity, though `JOIN` defaults to it.
+  - Add `ORDER BY state, city` for consistent output.
+  - Example:
+    ```sql
+    SELECT 
+       state,
+       city,
+       SUM(invoice_total) AS total_sales
+    FROM invoices i
+    INNER JOIN clients USING(client_id)
+    WHERE state IS NOT NULL AND city IS NOT NULL
+    GROUP BY state, city
+    ORDER BY state, city
+    ```
+
+### Total Payments by Date and Payment Method
+```sql
+SELECT 
+   date,
+   pm.name AS payment_method,
+   SUM(amount) AS total_payments
+FROM payments p
+JOIN payment_methods pm
+     ON p.payment_method = pm.payment_method_id
+GROUP BY date, payment_method
+ORDER BY date
+```
+
+#### Review
+- **Correctness**: The query correctly joins `payments` and `payment_methods`, grouping by `date` and `payment_method` to sum `amount`.
+- **Clarity**: Aliases (`p`, `pm`) and column names are clear, with `ORDER BY date` ensuring chronological output.
+- **Potential Issue**: If `date` is a `DATETIME` column, grouping by `date` uses distinct timestamps. If only the date part is needed, use `DATE(date)` or equivalent.
+- **Suggestion**:
+  - Use `DATE(date)` (MySQL) or equivalent for calendar date grouping if intended.
+  - Example for MySQL:
+    ```sql
+    SELECT 
+       DATE(date) AS payment_date,
+       pm.name AS payment_method,
+       SUM(amount) AS total_payments
+    FROM payments p
+    INNER JOIN payment_methods pm
+         ON p.payment_method = pm.payment_method_id
+    GROUP BY DATE(date), pm.name
+    ORDER BY DATE(date)
+    ```
+
+## General Recommendations
+- **Consistency**: Use consistent capitalization for SQL keywords (e.g., `SELECT`, `FROM`) and table/column names for readability.
+- **Error Handling**: Handle `NULL` values with `COALESCE` or `WHERE ... IS NOT NULL` where appropriate.
+- **Performance**: Ensure indexes on columns used in `WHERE`, `JOIN`, and `GROUP BY` clauses (e.g., `client_id`, `invoice_date`, `payment_date`) for large datasets.
+- **Documentation**: Add comments to explain complex queries or business logic, especially for subqueries or `UNION` operations.
