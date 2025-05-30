@@ -1436,10 +1436,7 @@ GROUP BY payment_method WITH ROLLUP
 - 
 
 
-
-
-
-## Products with Unit Price Greater Than Product ID 3
+## Subquery for Single-Value Comparison
 ```sql
 SELECT *
 FROM products
@@ -1450,32 +1447,30 @@ WHERE unit_price > (
 );
 ```
 
+### Concepts Used
+- **Subquery**: A query nested within another query, used here in the `WHERE` clause to return a single `unit_price` value for comparison.
+- **Scalar Subquery**: The subquery returns one column and one row, used as a value in the `>` comparison.
+
 ### Review
-- **Correctness**: The query is correct, selecting all columns from `products` where `unit_price` exceeds the `unit_price` of the product with `product_id = 3`. The subquery returns a single value, making the comparison valid.
-- **Clarity**: The query is clear, using a subquery to compare against a specific product’s price. However, `SELECT *` is less explicit about the columns returned.
-- **Potential Issue**:
-  - If no product has `product_id = 3`, the subquery returns `NULL`, causing the `WHERE` condition to evaluate to false for all rows, returning no results.
-  - Using `SELECT *` may include unnecessary columns, reducing readability and performance.
-- **Suggestion**:
-  - Specify desired columns instead of `SELECT *` for clarity and efficiency.
-  - Add error handling (e.g., check if the subquery returns a result) or ensure `product_id = 3` exists.
-  - Example correction:
+- **Correctness**: A scalar subquery is correctly used to compare `unit_price` against a specific product’s price. The outer query filters rows based on this comparison.
+- **Clarity**: The subquery clearly isolates a single value for comparison, making the logic straightforward.
+- **Potential Issues**:
+  - If the subquery returns no rows (e.g., `product_id = 3` doesn’t exist), it evaluates to `NULL`, causing the outer query to return no rows (`unit_price > NULL` is false).
+  - If the subquery returns multiple rows, it will cause a runtime error, as scalar subqueries must return exactly one row.
+- **Suggestions**:
+  - Ensure the subquery always returns a single row (e.g., using `LIMIT 1` or a unique condition).
+  - Handle `NULL` results with `COALESCE` or verify the subquery’s data existence with `EXISTS`.
+  - Example:
     ```sql
     SELECT product_id, product_name, unit_price
     FROM products
-    WHERE unit_price > (
-        SELECT unit_price
-        FROM products
-        WHERE product_id = 3
-    )
-    AND EXISTS (
-        SELECT 1
-        FROM products
-        WHERE product_id = 3
+    WHERE unit_price > COALESCE(
+        (SELECT unit_price FROM products WHERE product_id = 3),
+        0
     );
     ```
 
-## Employees with Above-Average Salary
+## Subquery with Aggregate Function
 ```sql
 SELECT *
 FROM employees
@@ -1485,27 +1480,30 @@ WHERE salary > (
 );
 ```
 
+### Concepts Used
+- **Subquery**: A nested query in the `WHERE` clause, computing the average `salary` using the `AVG` aggregate function.
+- **Scalar Subquery**: Returns a single value (the average salary) for comparison.
+
 ### Review
-- **Correctness**: The query is correct, selecting all columns from `employees` where `salary` exceeds the average salary computed by the subquery.
-- **Clarity**: The intent is clear, but `SELECT *` reduces specificity about the output columns.
-- **Potential Issue**:
-  - If `salary` contains `NULL` values, `AVG(salary)` ignores them, which is typically desired but should be confirmed.
-  - Using `SELECT *` may include unnecessary columns.
-  - The subquery recalculates the average for each row, which could be optimized for large datasets.
-- **Suggestion**:
-  - Specify relevant columns (e.g., `employee_id`, `first_name`, `salary`).
-  - Consider indexing `salary` for performance.
-  - Example correction:
+- **Correctness**: The subquery correctly calculates the average salary, and the outer query filters employees with salaries above this value.
+- **Clarity**: The use of `AVG` in a subquery is clear for comparing against a computed threshold.
+- **Potential Issues**:
+  - If `salary` contains `NULL` values, `AVG` ignores them, which is typically desired but should be confirmed.
+  - If the `employees` table is empty, the subquery returns `NULL`, and the outer query returns no rows.
+- **Suggestions**:
+  - Use `COALESCE` to handle potential `NULL` results from the subquery.
+  - Consider indexing the `salary` column for performance in large datasets.
+  - Example:
     ```sql
     SELECT employee_id, first_name, last_name, salary
     FROM employees
-    WHERE salary > (
-        SELECT AVG(COALESCE(salary, 0))
-        FROM employees
+    WHERE salary > COALESCE(
+        (SELECT AVG(salary) FROM employees),
+        0
     );
     ```
 
-## Products Not in Order Items
+## NOT IN with Subquery
 ```sql
 USE sql_store;
 SELECT *
@@ -1516,6 +1514,254 @@ WHERE product_id NOT IN (
 );
 ```
 
+### Concepts Used
+- **NOT IN**: Filters rows where a column’s value is not in the list returned by a subquery.
+- **Subquery**: Returns a list of `product_id` values from `order_items`.
+- **DISTINCT**: Ensures unique values in the subquery result to avoid redundant checks.
+
 ### Review
-- **Correctness**: The query is correct, selecting products not referenced in the `order_items` table by using `NOT IN` with a subquery.
-- **Clarity**: The query is
+- **Correctness**: The `NOT IN` operator correctly filters products not present in the `order_items` table. `DISTINCT` optimizes the subquery by removing duplicates.
+- **Clarity**: The concept is clear, identifying products that have not been ordered.
+- **Potential Issues**:
+  - If the subquery returns `NULL` values (e.g., `product_id` in `order_items` is `NULL`), `NOT IN` evaluates to false for all rows, potentially returning incorrect results.
+  - `NOT IN` can be slower than `NOT EXISTS` for large datasets due to the need to check the entire subquery result.
+- **Suggestions**:
+  - Prefer `NOT EXISTS` for better performance and correct handling of `NULL` values.
+  - Ensure indexes on `product_id` in both tables.
+  - Example:
+    ```sql
+    USE sql_store;
+    SELECT product_id, product_name
+    FROM products p
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM order_items oi
+        WHERE oi.product_id = p.product_id
+    );
+    ```
+
+## NOT IN with Subquery for Clients
+```sql
+SELECT *
+FROM clients
+WHERE client_id NOT IN (
+    SELECT DISTINCT client_id
+    FROM invoices
+);
+```
+
+### Concepts Used
+- **NOT IN**: Filters clients whose `client_id` is not in the subquery’s result.
+- **Subquery**: Returns a list of `client_id` values from `invoices`.
+- **DISTINCT**: Ensures unique `client_id` values in the subquery.
+
+### Review
+- **Correctness**: The query correctly identifies clients with no invoices using `NOT IN`.
+- **Clarity**: The logic is clear, targeting clients without associated invoices.
+- **Potential Issues**:
+  - As with the previous query, `NULL` values in the subquery’s `client_id` can cause `NOT IN` to return incorrect results.
+  - `NOT IN` may be less efficient than `NOT EXISTS` for large datasets.
+- **Suggestions**:
+  - Use `NOT EXISTS` to handle `NULL` values and improve performance.
+  - Ensure indexes on `client_id` in both tables.
+  - Example:
+    ```sql
+    USE sql_invoicing;
+    SELECT client_id, name
+    FROM clients c
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM invoices i
+        WHERE i.client_id = c.client_id
+    );
+    ```
+
+## LEFT JOIN for Non-Matching Records
+```sql
+SELECT *
+FROM clients
+LEFT JOIN invoices USING (client_id)
+WHERE invoice_id IS NULL;
+```
+
+### Concepts Used
+- **LEFT JOIN**: Includes all rows from the left table (`clients`) and matching rows from the right table (`invoices`), with `NULL` for non-matching rows.
+- **WHERE ... IS NULL**: Filters for rows where no match exists in the right table (i.e., clients with no invoices).
+- **USING**: Specifies the join condition when column names are identical.
+
+### Review
+- **Correctness**: The `LEFT JOIN` with `WHERE invoice_id IS NULL` correctly identifies clients with no invoices, as non-matching rows have `NULL` in `invoices` columns.
+- **Clarity**: The `LEFT JOIN` approach is a standard and clear way to find non-matching records.
+- **Potential Issues**:
+  - Selecting all columns (`*`) includes `NULL` columns from `invoices`, which may be unnecessary.
+  - The `USING` clause assumes identical column names (`client_id`); ensure this is true.
+- **Suggestions**:
+  - Select specific columns from the left table for clarity.
+  - Verify that `client_id` is the correct join column in both tables.
+  - Example:
+    ```sql
+    USE sql_invoicing;
+    SELECT c.client_id, c.name
+    FROM clients c
+    LEFT JOIN invoices i USING (client_id)
+    WHERE i.invoice_id IS NULL;
+    ```
+
+## IN with Subquery for Customers
+```sql
+SELECT *
+FROM customers 
+WHERE customer_id IN (
+    SELECT o.customer_id
+    FROM order_items oi
+    JOIN orders o USING (order_id)
+    WHERE product_id = 3
+);
+```
+
+### Concepts Used
+- **IN**: Filters rows where `customer_id` is in the list returned by the subquery.
+- **Subquery**: Retrieves `customer_id` values from `orders` joined with `order_items` where `product_id = 3`.
+- **JOIN with USING**: Combines tables based on a common `order_id` column.
+
+### Review
+- **Correctness**: The query correctly identifies customers who ordered a specific product using `IN` and a subquery with a join.
+- **Clarity**: The subquery with a join clearly isolates relevant customers.
+- **Potential Issues**:
+  - The subquery may return duplicate `customer_id` values, slowing performance; `DISTINCT` can help.
+  - Selecting `*` is vague.
+- **Suggestions**:
+  - Add `DISTINCT` in the subquery to avoid duplicates.
+  - Specify columns explicitly.
+  - Ensure indexes on `order_id` and `product_id`.
+  - Example:
+    ```sql
+    USE sql_store;
+    SELECT customer_id, first_name, last_name
+    FROM customers 
+    WHERE customer_id IN (
+        SELECT DISTINCT o.customer_id
+        FROM order_items oi
+        JOIN orders o USING (order_id)
+        WHERE product_id = 3
+    );
+    ```
+
+## JOIN with DISTINCT for Customers
+```sql
+SELECT DISTINCT customer_id, first_name, last_name
+FROM customers c
+JOIN orders o USING (customer_id)
+JOIN order_items oi USING (order_id)
+WHERE oi.product_id = 3;
+```
+
+### Concepts Used
+- **INNER JOIN with USING**: Combines tables based on common columns (`customer_id`, `order_id`).
+- **DISTINCT**: Ensures unique rows in the result, avoiding duplicate customers.
+- **WHERE**: Filters rows based on a condition (`product_id = 3`).
+
+### Review
+- **Correctness**: The query correctly uses `INNER JOIN` to find customers who ordered a specific product, with `DISTINCT` ensuring unique customer records.
+- **Clarity**: The use of `DISTINCT` and explicit column selection enhances clarity.
+- **Potential Issues**: No significant issues, but the database context should be specified for clarity.
+- **Suggestions**:
+  - Add a `USE` statement for context.
+  - Consider `ORDER BY` for consistent output.
+  - Ensure indexes on `customer_id`, `order_id`, and `product_id`.
+  - Example:
+    ```sql
+    USE sql_store;
+    SELECT DISTINCT c.customer_id, c.first_name, c.last_name
+    FROM customers c
+    JOIN orders o USING (customer_id)
+    JOIN order_items oi USING (order_id)
+    WHERE oi.product_id = 3
+    ORDER BY c.customer_id;
+    ```
+
+## Subquery with MAX for Invoices
+```sql
+USE sql_invoicing;
+SELECT *
+FROM invoices
+WHERE invoice_total > (
+    SELECT MAX(invoice_total)
+    FROM invoices
+    WHERE client_id = 3
+);
+```
+
+### Concepts Used
+- **Subquery**: Retrieves the maximum `invoice_total` for a specific client.
+- **Scalar Subquery**: Returns a single value for comparison with `invoice_total`.
+
+### Review
+- **Correctness**: The query correctly compares `invoice_total` against the maximum for `client_id = 3`.
+- **Clarity**: The subquery with `MAX` is a clear way to establish a threshold.
+- **Potential Issues**:
+  - If no invoices exist for `client_id = 3`, the subquery returns `NULL`, and the outer query returns no rows.
+- **Suggestions**:
+  - Handle empty subquery results with `EXISTS` or `COALESCE`.
+  - Specify columns instead of `*`.
+  - Example:
+    ```sql
+    USE sql_invoicing;
+    SELECT invoice_id, client_id, invoice_total
+    FROM invoices
+    WHERE invoice_total > COALESCE(
+        (SELECT MAX(invoice_total) FROM invoices WHERE client_id = 3),
+        0
+    );
+    ```
+
+## ALL with Subquery for Invoices
+```sql
+SELECT *
+FROM invoices
+WHERE invoice_total > ALL (
+    SELECT invoice_total
+    FROM invoices
+    WHERE client_id = 3
+);
+```
+
+### Concepts Used
+- **ALL**: Compares `invoice_total` against all values returned by the subquery, requiring it to be greater than every value.
+- **Subquery**: Returns a list of `invoice_total` values for `client_id = 3`.
+
+### Review
+- **Correctness**: The query is correct and equivalent to comparing against the maximum `invoice_total`, as `> ALL` means greater than every value in the subquery.
+- **Clarity**: The `ALL` operator is less common and may be less intuitive than using `MAX`.
+- **Potential Issues**:
+  - If the subquery is empty (no invoices for `client_id = 3`), `> ALL` evaluates to true, returning all rows, which may be unintended.
+  - Selecting `*` is vague.
+- **Suggestions**:
+  - Prefer `> (SELECT MAX(...))` for clarity and equivalence.
+  - Handle empty subquery cases with `EXISTS`.
+  - Specify columns explicitly.
+  - Example:
+    ```sql
+    USE sql_invoicing;
+    SELECT invoice_id, client_id, invoice_total
+    FROM invoices
+    WHERE invoice_total > (
+        SELECT MAX(invoice_total)
+        FROM invoices
+        WHERE client_id = 3
+    )
+    AND EXISTS (
+        SELECT 1
+        FROM invoices
+        WHERE client_id = 3
+    );
+    ```
+
+## General Recommendations
+- **Consistency**: Use consistent capitalization for SQL keywords (e.g., `SELECT`, `FROM`) and table/column names.
+- **Clarity**: Avoid `SELECT *`; explicitly list columns for better readability and maintainability.
+- **Performance**: Ensure indexes on columns used in `WHERE`, `JOIN`, and subqueries (e.g., `client_id`, `product_id`, `order_id`).
+- **NULL Handling**: Be cautious with `NOT IN`, as `NULL` values in subqueries can lead to incorrect results; prefer `NOT EXISTS`. Use `COALESCE` for scalar subqueries that may return `NULL`.
+- **Context**: Include `USE` statements to specify the database context.
+- **Subquery Optimization**: Use `DISTINCT` in multi-row subqueries to reduce duplicates, and consider `EXISTS` or joins for better performance in some cases.
+
