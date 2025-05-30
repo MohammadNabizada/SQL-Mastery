@@ -1433,3 +1433,89 @@ GROUP BY payment_method WITH ROLLUP
 - **Performance**: Ensure indexes exist on columns used in `JOIN`, `WHERE`, `GROUP BY`, and `HAVING` clauses (e.g., `client_id`, `customer_id`, `state`) to optimize performance on large datasets.
 - **Documentation**: Add comments to clarify complex logic, especially for `WITH ROLLUP` queries, which can produce `NULL` values that may confuse users.
 - **Database Compatibility**: Verify that features like `WITH ROLLUP` are supported in the target database system, as support varies (e.g., MySQL supports it, but some SQL Server versions may not).
+- 
+
+
+
+
+
+## Products with Unit Price Greater Than Product ID 3
+```sql
+SELECT *
+FROM products
+WHERE unit_price > (
+    SELECT unit_price
+    FROM products
+    WHERE product_id = 3
+);
+```
+
+### Review
+- **Correctness**: The query is correct, selecting all columns from `products` where `unit_price` exceeds the `unit_price` of the product with `product_id = 3`. The subquery returns a single value, making the comparison valid.
+- **Clarity**: The query is clear, using a subquery to compare against a specific product’s price. However, `SELECT *` is less explicit about the columns returned.
+- **Potential Issue**:
+  - If no product has `product_id = 3`, the subquery returns `NULL`, causing the `WHERE` condition to evaluate to false for all rows, returning no results.
+  - Using `SELECT *` may include unnecessary columns, reducing readability and performance.
+- **Suggestion**:
+  - Specify desired columns instead of `SELECT *` for clarity and efficiency.
+  - Add error handling (e.g., check if the subquery returns a result) or ensure `product_id = 3` exists.
+  - Example correction:
+    ```sql
+    SELECT product_id, product_name, unit_price
+    FROM products
+    WHERE unit_price > (
+        SELECT unit_price
+        FROM products
+        WHERE product_id = 3
+    )
+    AND EXISTS (
+        SELECT 1
+        FROM products
+        WHERE product_id = 3
+    );
+    ```
+
+## Employees with Above-Average Salary
+```sql
+SELECT *
+FROM employees
+WHERE salary > (
+    SELECT AVG(salary)
+    FROM employees
+);
+```
+
+### Review
+- **Correctness**: The query is correct, selecting all columns from `employees` where `salary` exceeds the average salary computed by the subquery.
+- **Clarity**: The intent is clear, but `SELECT *` reduces specificity about the output columns.
+- **Potential Issue**:
+  - If `salary` contains `NULL` values, `AVG(salary)` ignores them, which is typically desired but should be confirmed.
+  - Using `SELECT *` may include unnecessary columns.
+  - The subquery recalculates the average for each row, which could be optimized for large datasets.
+- **Suggestion**:
+  - Specify relevant columns (e.g., `employee_id`, `first_name`, `salary`).
+  - Consider indexing `salary` for performance.
+  - Example correction:
+    ```sql
+    SELECT employee_id, first_name, last_name, salary
+    FROM employees
+    WHERE salary > (
+        SELECT AVG(COALESCE(salary, 0))
+        FROM employees
+    );
+    ```
+
+## Products Not in Order Items
+```sql
+USE sql_store;
+SELECT *
+FROM products
+WHERE product_id NOT IN (
+    SELECT DISTINCT product_id
+    FROM order_items
+);
+```
+
+### Review
+- **Correctness**: The query is correct, selecting products not referenced in the `order_items` table by using `NOT IN` with a subquery.
+- **Clarity**: The query is
