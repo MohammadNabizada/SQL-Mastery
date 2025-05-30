@@ -1271,3 +1271,165 @@ ORDER BY date
 - **Error Handling**: Handle `NULL` values with `COALESCE` or `WHERE ... IS NOT NULL` where appropriate.
 - **Performance**: Ensure indexes on columns used in `WHERE`, `JOIN`, and `GROUP BY` clauses (e.g., `client_id`, `invoice_date`, `payment_date`) for large datasets.
 - **Documentation**: Add comments to explain complex queries or business logic, especially for subqueries or `UNION` operations.
+
+
+
+
+
+## Client Sales and Invoice Count with Filtering
+```sql
+USE sql_invoicing;
+SELECT 
+    client_id,
+    SUM(invoice_total) AS total_sales,
+    COUNT(*) AS number_of_invoices
+FROM invoices
+GROUP BY client_id
+HAVING total_sales > 500 AND number_of_invoices > 5
+```
+
+### Review
+- **Correctness**: The query is correct, grouping invoices by `client_id` and calculating the total sales (`SUM(invoice_total)`) and number of invoices (`COUNT(*)`). The `HAVING` clause filters groups where total sales exceed 500 and the invoice count exceeds 5.
+- **Clarity**: The query is clear, with descriptive aliases (`total_sales`, `number_of_invoices`). The `HAVING` clause is appropriately used to filter aggregated results.
+- **Potential Issue**: If `invoice_total` contains `NULL` values, they are ignored by `SUM`, which is typically fine but should be confirmed based on business logic. The `USE sql_invoicing` statement assumes the database exists.
+- **Suggestion**:
+  - Explicitly handle `NULL` values with `COALESCE` if `invoice_total` should default to 0.
+  - Consider adding an `ORDER BY` clause (e.g., `ORDER BY total_sales DESC`) for consistent output.
+  - Example correction:
+    ```sql
+    USE sql_invoicing;
+    SELECT 
+        client_id,
+        SUM(COALESCE(invoice_total, 0)) AS total_sales,
+        COUNT(*) AS number_of_invoices
+    FROM invoices
+    GROUP BY client_id
+    HAVING total_sales > 500 AND number_of_invoices > 5
+    ORDER BY total_sales DESC;
+    ```
+
+## Customer Sales in Virginia
+```sql
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    SUM(oi.quantity * oi.unit_price) AS total_sales
+FROM customers c
+JOIN orders o USING (customer_id)
+JOIN order_items oi USING (order_id)
+WHERE state = 'VA'
+GROUP BY 
+    c.customer_id,
+    c.first_name,
+    c.last_name
+```
+
+### Review
+- **Correctness**: The query is correct, joining `customers`, `orders`, and `order_items` tables to calculate total sales (`quantity * unit_price`) for customers in Virginia (`state = 'VA'`). The `GROUP BY` includes all non-aggregated columns (`customer_id`, `first_name`, `last_name`).
+- **Clarity**: The use of `USING` is concise, assuming `customer_id` and `order_id` are common column names. Aliases (`c`, `o`, `oi`) enhance readability.
+- **Potential Issue**: 
+  - If `quantity` or `unit_price` contains `NULL` values, the product will be `NULL`, potentially underreporting sales. Use `COALESCE` to handle this.
+  - Including `first_name` and `last_name` in the `GROUP BY` is unnecessary if `customer_id` is unique, as it may increase processing time.
+  - The `WHERE state = 'VA'` assumes `state` is in the `customers` table; confirm this to avoid errors.
+- **Suggestion**:
+  - Simplify `GROUP BY` to only `customer_id` if it uniquely identifies customers.
+  - Use `COALESCE` for `quantity` and `unit_price`.
+  - Add `ORDER BY total_sales DESC` for better presentation.
+  - Example correction:
+    ```sql
+    SELECT 
+        c.customer_id,
+        c.first_name,
+        c.last_name,
+        SUM(COALESCE(oi.quantity, 0) * COALESCE(oi.unit_price, 0)) AS total_sales
+    FROM customers c
+    JOIN orders o USING (customer_id)
+    JOIN order_items oi USING (order_id)
+    WHERE c.state = 'VA'
+    GROUP BY c.customer_id
+    ORDER BY total_sales DESC;
+    ```
+
+## Sales by State and City with Rollup
+```sql
+SELECT 
+    state,
+    city,
+    SUM(invoice_total) AS total_sales
+FROM invoices i
+JOIN clients c USING (client_id)
+GROUP BY state, city WITH ROLLUP
+```
+
+### Review
+- **Correctness**: The query is correct, grouping invoices by `state` and `city` and using `WITH ROLLUP` to include subtotals and a grand total. The `JOIN` with `clients` retrieves `state` and `city`.
+- **Clarity**: The query is clear, with `USING(client_id)` simplifying the join syntax. The `WITH ROLLUP` clause adds summary rows for each `state` and a grand total.
+- **Potential Issue**:
+  - `NULL` values in `state` or `city` will appear as a group, which may be confused with `ROLLUP` summary rows (where `city` or both columns are `NULL`).
+  - `WITH ROLLUP` may not be supported in all databases (e.g., older MySQL versions or some SQL Server versions); verify compatibility.
+- **Suggestion**:
+  - Filter out `NULL` values in `state` and `city` if they are not meaningful (e.g., `WHERE state IS NOT NULL AND city IS NOT NULL`).
+  - Add `ORDER BY state, city` for consistent output, noting that `ROLLUP` summary rows use `NULL` for aggregated levels.
+  - Example correction:
+    ```sql
+    SELECT 
+        state,
+        city,
+        SUM(invoice_total) AS total_sales
+    FROM invoices i
+    JOIN clients c USING (client_id)
+    WHERE c.state IS NOT NULL AND c.city IS NOT NULL
+    GROUP BY state, city WITH ROLLUP
+    ORDER BY state, city;
+    ```
+
+## Total Payments by Payment Method with Rollup
+```sql
+SELECT
+    payment_method,
+    SUM(amount) AS total
+FROM payments p
+JOIN payment_methods pm
+    USING p.payment_method = pm.payment_method_id
+GROUP BY payment_method WITH ROLLUP
+```
+
+### Review
+- **Issue**: The syntax `USING p.payment_method = pm.payment_method_id` is incorrect. The `USING` clause requires a common column name between tables, not an equality condition. It should be `USING (payment_method)` if `payment_method` is the column name in both tables, or `ON p.payment_method = pm.payment_method_id` otherwise.
+- **Correctness**: Once corrected, the query groups payments by `payment_method`, calculates the total `amount`, and uses `WITH ROLLUP` to include a grand total.
+- **Clarity**: The query intent is clear, but the incorrect `USING` syntax reduces clarity. The alias `total` is concise but could be more descriptive (e.g., `total_payments`).
+- **Potential Issue**:
+  - If `amount` contains `NULL` values, they are ignored by `SUM`, which is typically fine but should be confirmed.
+  - The `payment_method` column in the `SELECT` clause should reference `pm.name` (as in your previous query) if the `payment_methods` table stores the method name in a `name` column.
+- **Suggestion**:
+  - Fix the `USING` clause or replace it with `ON`.
+  - Use `pm.name` as `payment_method` if that’s the column containing the payment method name.
+  - Add `ORDER BY payment_method` for consistent output.
+  - Example correction (assuming `payment_method` is the common column):
+    ```sql
+    SELECT 
+        pm.name AS payment_method,
+        SUM(COALESCE(p.amount, 0)) AS total_payments
+    FROM payments p
+    JOIN payment_methods pm USING (payment_method)
+    GROUP BY pm.name WITH ROLLUP
+    ORDER BY pm.name;
+    ```
+  - Alternative (if column names differ):
+    ```sql
+    SELECT 
+        pm.name AS payment_method,
+        SUM(COALESCE(p.amount, 0)) AS total_payments
+    FROM payments p
+    JOIN payment_methods pm ON p.payment_method = pm.payment_method_id
+    GROUP BY pm.name WITH ROLLUP
+    ORDER BY pm.name;
+    ```
+
+## General Recommendations
+- **Consistency**: Use consistent capitalization for SQL keywords (e.g., `SELECT`, `FROM`) and table/column names to enhance readability.
+- **Error Handling**: Use `COALESCE` to handle `NULL` values in aggregated columns (e.g., `invoice_total`, `amount`) to ensure accurate calculations.
+- **Performance**: Ensure indexes exist on columns used in `JOIN`, `WHERE`, `GROUP BY`, and `HAVING` clauses (e.g., `client_id`, `customer_id`, `state`) to optimize performance on large datasets.
+- **Documentation**: Add comments to clarify complex logic, especially for `WITH ROLLUP` queries, which can produce `NULL` values that may confuse users.
+- **Database Compatibility**: Verify that features like `WITH ROLLUP` are supported in the target database system, as support varies (e.g., MySQL supports it, but some SQL Server versions may not).
