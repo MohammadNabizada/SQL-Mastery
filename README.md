@@ -23,13 +23,40 @@ Documenting my **45-day challenge** to master SQL through:
 | **My Level**     | Beginner → Intermediate -> advanced |
 
 ---
+# SQL Concepts Table of Contents
+
+- [Installation and Setup](#installation-and-setup)
+- [SELECT Statement](#select-statement)
+- [Filtering with WHERE](#filtering-with-where)
+- [BETWEEN, LIKE, REGEXP, IS NULL, ORDER BY](#between-like-regexp-is-null-order-by)
+- [LIMIT and OFFSET](#limit-and-offset)
+- [INNER JOIN](#inner-join)
+- [OUTER JOIN](#outer-join)
+- [NATURAL JOIN](#natural-join)
+- [CROSS JOIN](#cross-join)
+- [UNION](#union)
+- [INSERT](#insert)
+- [UPDATE](#update)
+- [DELETE](#delete)
+- [Aggregate Functions](#aggregate-functions)
+- [GROUP BY and HAVING](#group-by-and-having)
+- [WITH ROLLUP](#with-rollup)
+- [Subqueries (Scalar)](#subqueries-scalar)
+- [IN and NOT IN](#in-and-not-in)
+- [ANY and SOME](#any-and-some)
+- [ALL](#all)
+- [Correlated Subqueries](#correlated-subqueries)
+- [EXISTS and NOT EXISTS](#exists-and-not-exists)
+- [Subqueries in SELECT Clause](#subqueries-in-select-clause)
+- [Derived Tables](#derived-tables)
+
 
 ## 🗂 Daily Logs
 ### **Day 1: Install and config MySql**  
 📝 **Notes**:  
 > "Learning instalation of MYSQL."  
 
-
+## Installation and Setup
 # MySQL 8.0 Installation
 
 *Step 1: Searching MySql downloader, dowanload and install on your computer*
@@ -78,7 +105,7 @@ Documenting my **45-day challenge** to master SQL through:
 
 
 
-
+## SELECT Statement
 ### **Day 2: Creating the Databases and SELECT Statement**  
 📝 **Notes**:  
 > "Database and SELECT Statement" 
@@ -117,7 +144,7 @@ ORDER BY column_name;  -- Sorting
 ```sql
 SELECT 1, 2;  -- Basic connection check
 ```
-
+## Filtering with WHERE
 **Filtered Query:**
 ```sql
 USE shop_db;
@@ -200,7 +227,7 @@ WHERE column NOT IN ('value1','value2','value3')
 
 
 
-
+## BETWEEN, LIKE, REGEXP, IS NULL, ORDER BY
 
 ### **Day 4: BETWEEN, REGEXP, IS NULL, ORDER BY**
 
@@ -317,7 +344,7 @@ ORDER BY 1, 2; -- Sort by column1, then column2
 
 
 
-
+## LIMIT and OFFSET
 
 ### **Day 5: LIMIT, JOIN**
 
@@ -380,7 +407,7 @@ Implement paginated data retrieval
 - Combine with `ORDER BY` for consistent pagination
 
 ---
-
+## INNER JOIN
 ## Query 3: Table Join with Column Selection
 ```sql
 SELECT t1.id, t1.foreign_key, t2.field1, t2.field2
@@ -445,7 +472,7 @@ This version:
 - Offers alternative syntax examples
 - Preserves professional formatting
 
-
+## OUTER JOIN
 ### **Day 6: INNER JOIN, OUTER JOIN**
 
 # SQL JOIN Operations Reference
@@ -743,7 +770,7 @@ sql``` SELECT * FROM A JOIN B ON A.key = B.key ```
 sql``` SELECT * FROM A LEFT JOIN B ON A.key = B.key ```
 
 
-
+## NATURAL JOIN
 
 ## 1. Joining Tables
 ### NATURAL JOIN
@@ -757,6 +784,7 @@ NATURAL JOIN table2 t2
 **Purpose**: Retrieves `id` from the first table and `name` from the second table using a `NATURAL JOIN`.  
 **Review**: This query joins two tables based on columns with identical names (e.g., a shared `id`). While concise, `NATURAL JOIN` can be risky in production as it assumes matching column names, which may lead to unintended joins if schemas change. Explicit `JOIN ... ON` syntax is often preferred for clarity and control.
 
+## CROSS JOIN
 ### CROSS JOIN (Explicit and Implicit)
 ```sql
 SELECT t2.name AS entity, t3.item AS product
@@ -782,6 +810,7 @@ FROM table4 t4, table3 t3
 **Purpose**: Pairs every `id` from the fourth table with every `item` from the third table.  
 **Review**: These snippets mirror the previous `CROSS JOIN`, demonstrating consistency in joining unrelated tables. The aliasing (`id`, `product_name`) improves readability. The explicit `CROSS JOIN` is preferred for clarity, but both are functionally equivalent. Ensure the result set size is manageable in real-world applications.
 
+## UNION
 ## 2. Combining Data with UNION
 ### Active and Archived Records
 ```sql
@@ -825,6 +854,7 @@ ORDER BY score DESC
 **Purpose**: Categorizes records into "Gold," "Silver," or "Bronze" tiers based on `score`, sorting results by score in descending order.  
 **Review**: This query elegantly segments data using `UNION` and conditions. The `ORDER BY score DESC` applies to the entire result set, making it user-friendly. Descriptive aliases (`type`) enhance readability. Ensure `score` is indexed for performance in large datasets.
 
+## INSERT
 ## 3. Inserting Data
 ### Inserting into a Table
 ```sql
@@ -920,6 +950,8 @@ This collection is an excellent addition to a GitHub repository, demonstrating p
 
 -- SELF JOIN
 ```sqlSELECT * FROM TableA a1 JOIN TableA a2 ON a1.key = a2.key```
+
+## UPDATE
 # SQL Update Operations Showcase
 
 This project demonstrates various SQL `UPDATE` statements to modify data in the `sql_invoicing` and `sql_store` databases, showcasing practical database management tasks like payment adjustments, loyalty rewards, and customer tagging. Below are the key operations with explanations.
@@ -1004,7 +1036,7 @@ WHERE customer_id IN (
 # SQL Code Review
 
 This document provides a detailed review of the provided SQL code, evaluating correctness, clarity, potential issues, and suggestions for improvement. Each query is analyzed separately with corrected versions where applicable.
-
+## DELETE
 ## DELETE FROM Invoices with Subquery
 ```sql
 DELETE FROM invoices
@@ -1049,7 +1081,7 @@ RESTORING THE DATABASE
     -- Restore database (example for MySQL)
     -- mysql -u username -p sql_invoicing < backup.sql
     ```
-
+## Aggregate Functions
 ## Aggregate Queries on Invoices
 
 ### Maximum, Minimum, and Average Invoice Totals
@@ -1200,7 +1232,7 @@ WHERE invoice_date BETWEEN '2019-01-01' AND '2019-12-30'
     FROM invoices
     WHERE invoice_date BETWEEN '2019-01-01' AND '2019-12-30'
     ```
-
+## GROUP BY and HAVING
 ## Group By Queries
 
 ### Total Sales by State and City
@@ -1350,7 +1382,7 @@ GROUP BY
     GROUP BY c.customer_id
     ORDER BY total_sales DESC;
     ```
-
+## WITH ROLLUP
 ## Sales by State and City with Rollup
 ```sql
 SELECT 
@@ -1435,7 +1467,7 @@ GROUP BY payment_method WITH ROLLUP
 - **Database Compatibility**: Verify that features like `WITH ROLLUP` are supported in the target database system, as support varies (e.g., MySQL supports it, but some SQL Server versions may not).
 - 
 
-
+## Subqueries (Scalar)
 ## Subquery for Single-Value Comparison
 ```sql
 SELECT *
@@ -1502,7 +1534,7 @@ WHERE salary > (
         0
     );
     ```
-
+## IN and NOT IN
 ## NOT IN with Subquery
 ```sql
 USE sql_store;
@@ -1549,7 +1581,7 @@ WHERE client_id NOT IN (
     FROM invoices
 );
 ```
-
+## EXISTS and NOT EXISTS
 ### Concepts Used
 - **NOT IN**: Filters clients whose `client_id` is not in the subquery’s result.
 - **Subquery**: Returns a list of `client_id` values from `invoices`.
@@ -1714,7 +1746,7 @@ WHERE invoice_total > (
         0
     );
     ```
-
+## ALL
 ## ALL with Subquery for Invoices
 ```sql
 SELECT *
@@ -1765,7 +1797,7 @@ WHERE invoice_total > ALL (
 - **Context**: Include `USE` statements to specify the database context.
 - **Subquery Optimization**: Use `DISTINCT` in multi-row subqueries to reduce duplicates, and consider `EXISTS` or joins for better performance in some cases.
 
-
+## ANY and SOME
 ## ANY with Subquery
 ```sql
 SELECT *
@@ -1851,7 +1883,7 @@ WHERE salary > (
     WHERE office_id = e.office_id
 );
 ```
-
+## Correlated Subqueries
 ### Concept: Correlated Subquery
 - **Definition**: A subquery that references columns from the outer query, executed repeatedly for each row of the outer query.
 - **Usage**: Used here to compare each employee’s `salary` to the average salary of their specific `office_id`.
@@ -1989,7 +2021,7 @@ SELECT
     invoice_total - (SELECT invoice_average) AS difference
 FROM invoices;
 ```
-
+## Subqueries in SELECT Clause
 ### Concepts: Subquery in SELECT
 - **Definition**: Subqueries in the `SELECT` clause compute a value for each row of the outer query, included as a column.
 - **Usage**: Calculates the overall average `invoice_total` and the difference between each `invoice_total` and this average.
@@ -2067,7 +2099,7 @@ FROM (
 ) AS sales_summary
 WHERE total_sales IS NOT NULL;
 ```
-
+## Derived Tables
 ### Concepts: Derived Table, Subqueries in SELECT
 - **Definition**: A derived table is a subquery in the `FROM` clause, treated as a temporary table with an alias (e.g., `sales_summary`).
 - **Correlated Subquery**: Computes client-specific totals.
