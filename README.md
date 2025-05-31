@@ -1765,3 +1765,343 @@ WHERE invoice_total > ALL (
 - **Context**: Include `USE` statements to specify the database context.
 - **Subquery Optimization**: Use `DISTINCT` in multi-row subqueries to reduce duplicates, and consider `EXISTS` or joins for better performance in some cases.
 
+
+## ANY with Subquery
+```sql
+SELECT *
+FROM clients
+WHERE client_id = ANY (
+    SELECT client_id
+    FROM invoices
+    GROUP BY client_id
+    HAVING COUNT(*) >= 2
+);
+```
+
+### Concept: ANY
+- **Definition**: The `ANY` operator compares a value to each value in a list returned by a subquery, returning true if the comparison is true for at least one value in the list.
+- **Usage**: Used in the `WHERE` clause to filter rows where a column (e.g., `client_id`) matches any value from a subquery.
+- **Subquery**: Returns a list of values (e.g., `client_id` values with at least two invoices, determined by `GROUP BY` and `HAVING`).
+- **Correctness**: The `ANY` operator is correctly used to select rows where `client_id` matches any value from the subquery. It’s equivalent to using `IN` for equality comparisons.
+- **Clarity**: The concept is clear, especially when paired with `GROUP BY` and `HAVING` to filter subquery results.
+- **Potential Issues**:
+  - If the subquery returns no rows, `ANY` evaluates to false, and no rows are returned.
+  - If the subquery returns `NULL` values, the comparison may behave unexpectedly (e.g., `client_id = NULL` is false).
+- **Best Practices**:
+  - Use `IN` instead of `ANY` for equality comparisons, as it’s more readable and widely understood.
+  - Ensure the subquery column (e.g., `client_id`) does not return `NULL` or handle `NULL` explicitly.
+  - Example:
+    ```sql
+    SELECT client_id, name
+    FROM clients
+    WHERE client_id IN (
+        SELECT client_id
+        FROM invoices
+        WHERE client_id IS NOT NULL
+        GROUP BY client_id
+        HAVING COUNT(*) >= 2
+    );
+    ```
+
+## SOME with Subquery
+```sql
+SELECT *
+FROM clients
+WHERE client_id = SOME (
+    SELECT client_id
+    FROM invoices
+    GROUP BY client_id
+    HAVING COUNT(*) >= 2
+);
+```
+
+### Concept: SOME
+- **Definition**: The `SOME` operator is identical to `ANY`, comparing a value to each value in a subquery’s result, returning true if the comparison is true for at least one value.
+- **Usage**: Used in the `WHERE` clause, typically with comparison operators (e.g., `=`), to filter rows based on subquery results.
+- **Subquery**: Returns a list of values (e.g., `client_id` values with multiple invoices).
+- **Correctness**: The `SOME` operator is correctly applied, functioning the same as `ANY` or `IN` for equality comparisons.
+- **Clarity**: Less common than `IN`, `SOME` may reduce clarity for readers unfamiliar with it.
+- **Potential Issues**:
+  - Same as `ANY`: empty subquery results or `NULL` values can affect outcomes.
+  - Less intuitive than `IN` for equality checks.
+- **Best Practices**:
+  - Prefer `IN` for equality comparisons due to its widespread use and clarity.
+  - Ensure subquery results are non-`NULL` or handle `NULL` explicitly.
+  - Example:
+    ```sql
+    SELECT client_id, name
+    FROM clients
+    WHERE client_id IN (
+        SELECT client_id
+        FROM invoices
+        WHERE client_id IS NOT NULL
+        GROUP BY client_id
+        HAVING COUNT(*) >= 2
+    );
+    ```
+
+## Correlated Subquery with Aggregate
+```sql
+USE sql_hr;
+SELECT *
+FROM employees e
+WHERE salary > (
+    SELECT AVG(salary)
+    FROM employees
+    WHERE office_id = e.office_id
+);
+```
+
+### Concept: Correlated Subquery
+- **Definition**: A subquery that references columns from the outer query, executed repeatedly for each row of the outer query.
+- **Usage**: Used here to compare each employee’s `salary` to the average salary of their specific `office_id`.
+- **Correctness**: The correlated subquery correctly calculates the average salary for the same `office_id` as the outer query’s current row.
+- **Clarity**: The correlation between `e.office_id` and the subquery’s `WHERE` clause is clear, though correlated subqueries can be complex to read.
+- **Potential Issues**:
+  - Correlated subqueries can be slow for large datasets, as they execute for each outer row.
+  - If no employees exist for an `office_id`, the subquery returns `NULL`, and the comparison may exclude rows.
+- **Best Practices**:
+  - Consider using a join with a derived table or `GROUP BY` for better performance in large datasets.
+  - Handle potential `NULL` results with `COALESCE`.
+  - Example:
+    ```sql
+    USE sql_hr;
+    SELECT e.employee_id, e.first_name, e.last_name, e.salary
+    FROM employees e
+    JOIN (
+        SELECT office_id, AVG(salary) AS avg_salary
+        FROM employees
+        GROUP BY office_id
+    ) avg_salaries
+    ON e.office_id = avg_salaries.office_id
+    WHERE e.salary > COALESCE(avg_salaries.avg_salary, 0);
+    ```
+
+## Correlated Subquery for Invoices
+```sql
+SELECT *
+FROM invoices i
+WHERE invoice_total > (
+    SELECT AVG(invoice_total)
+    FROM invoices
+    WHERE client_id = i.client_id
+);
+```
+
+### Concept: Correlated Subquery
+- **Definition**: A subquery that depends on the outer query’s row, executed for each row of the outer query.
+- **Usage**: Compares each invoice’s `invoice_total` to the average `invoice_total` for the same `client_id`.
+- **Correctness**: The subquery correctly computes the average per client, filtering invoices above this average.
+- **Clarity**: The correlation is clear but may be less intuitive for complex queries.
+- **Potential Issues**:
+  - Slow performance for large tables due to repeated subquery execution.
+  - If a `client_id` has no invoices, the subquery returns `NULL`, excluding the row.
+- **Best Practices**:
+  - Replace with a join and `GROUP BY` for better performance.
+  - Handle `NULL` with `COALESCE` or verify data existence.
+  - Example:
+    ```sql
+    SELECT i.invoice_id, i.client_id, i.invoice_total
+    FROM invoices i
+    JOIN (
+        SELECT client_id, AVG(invoice_total) AS avg_total
+        FROM invoices
+        GROUP BY client_id
+    ) avg_invoices
+    ON i.client_id = avg_invoices.client_id
+    WHERE i.invoice_total > COALESCE(avg_invoices.avg_total, 0);
+    ```
+
+## EXISTS with Correlated Subquery
+```sql
+SELECT *
+FROM clients c
+WHERE EXISTS (
+    SELECT client_id
+    FROM invoices
+    WHERE client_id = c.client_id
+);
+```
+
+### Concept: EXISTS
+- **Definition**: The `EXISTS` operator checks if a subquery returns at least one row, returning true or false.
+- **Correlated Subquery**: The subquery references the outer query’s `client_id` to check for related invoices.
+- **Usage**: Filters clients who have at least one invoice.
+- **Correctness**: The `EXISTS` clause correctly identifies clients with matching invoices.
+- **Clarity**: The use of `EXISTS` is clear and efficient for checking existence.
+- **Potential Issues**:
+  - Selecting all columns (`*`) may include unnecessary data.
+  - Performance depends on indexing of `client_id` in `invoices`.
+- **Best Practices**:
+  - Select specific columns for clarity.
+  - Ensure indexes on join columns (e.g., `client_id`).
+  - Example:
+    ```sql
+    SELECT c.client_id, c.name
+    FROM clients c
+    WHERE EXISTS (
+        SELECT 1
+        FROM invoices
+        WHERE client_id = c.client_id
+    );
+    ```
+
+## NOT EXISTS with Correlated Subquery
+```sql
+SELECT *
+FROM products p
+WHERE NOT EXISTS (
+    SELECT product_id
+    FROM order_items
+    WHERE product_id = p.product_id
+);
+```
+
+### Concept: NOT EXISTS
+- **Definition**: The `NOT EXISTS` operator checks if a subquery returns no rows, returning true if no matching rows are found.
+- **Correlated Subquery**: Checks for `order_items` with the same `product_id` as the outer query’s row.
+- **Usage**: Filters products that have no associated order items.
+- **Correctness**: The query correctly identifies products not ordered, using `NOT EXISTS` for absence checks.
+- **Clarity**: The `NOT EXISTS` approach is clear and typically more efficient than `NOT IN` for handling `NULL` values.
+- **Potential Issues**:
+  - Selecting `*` is vague.
+  - Performance depends on indexing of `product_id`.
+- **Best Practices**:
+  - Select specific columns.
+  - Use `SELECT 1` in the subquery for efficiency, as the result content is irrelevant.
+  - Example:
+    ```sql
+    SELECT p.product_id, p.product_name
+    FROM products p
+    WHERE NOT EXISTS (
+        SELECT 1
+        FROM order_items
+        WHERE product_id = p.product_id
+    );
+    ```
+
+## Subquery in SELECT Clause
+```sql
+SELECT
+    invoice_id,
+    invoice_total,
+    (SELECT AVG(invoice_total) FROM invoices) AS invoice_average,
+    invoice_total - (SELECT invoice_average) AS difference
+FROM invoices;
+```
+
+### Concepts: Subquery in SELECT
+- **Definition**: Subqueries in the `SELECT` clause compute a value for each row of the outer query, included as a column.
+- **Usage**: Calculates the overall average `invoice_total` and the difference between each `invoice_total` and this average.
+- **Correctness**: The subquery correctly computes the average, but the second subquery (`SELECT invoice_average`) is invalid, as it references a column alias (`invoice_average`) not yet defined.
+- **Clarity**: Using a subquery for the average is clear, but the invalid reference reduces clarity.
+- **Potential Issues**:
+  - The `difference` calculation fails due to the invalid subquery reference.
+  - Repeated execution of the same subquery (`AVG`) can be inefficient.
+- **Best Practices**:
+  - Use a derived table or common table expression (CTE) to compute the average once.
+  - Reference the alias directly in the calculation.
+  - Example:
+    ```sql
+    WITH avg_invoice AS (
+        SELECT AVG(invoice_total) AS invoice_average
+        FROM invoices
+    )
+    SELECT
+        invoice_id,
+        invoice_total,
+        (SELECT invoice_average FROM avg_invoice) AS invoice_average,
+        invoice_total - (SELECT invoice_average FROM avg_invoice) AS difference
+    FROM invoices;
+    ```
+
+## Multiple Subqueries in SELECT Clause
+```sql
+SELECT 
+    client_id,
+    name,
+    (SELECT SUM(invoice_total) FROM invoices WHERE client_id = c.client_id) AS total_sales,
+    (SELECT AVG(invoice_total) FROM invoices) AS average,
+    (SELECT total_sales - average) AS difference
+FROM clients c;
+```
+
+### Concepts: Subqueries in SELECT, Correlated Subquery
+- **Definition**: Multiple subqueries in the `SELECT` clause compute values (e.g., total sales per client, overall average) for each row.
+- **Correlated Subquery**: The `SUM` subquery uses the outer query’s `client_id` to calculate client-specific totals.
+- **Usage**: Displays client details, their total sales, the overall invoice average, and the difference.
+- **Correctness**: The `total_sales` and `average` subqueries are correct, but the `difference` subquery is invalid, as it references aliases (`total_sales`, `average`) not yet available.
+- **Clarity**: The intent is clear, but the invalid `difference` subquery causes confusion.
+- **Potential Issues**:
+  - The `difference` subquery fails due to alias referencing.
+  - Correlated subqueries (`SUM`) can be slow for large datasets.
+- **Best Practices**:
+  - Compute aggregates in a derived table or CTE for efficiency.
+  - Calculate differences directly in the outer query.
+  - Example:
+    ```sql
+    WITH invoice_stats AS (
+        SELECT AVG(invoice_total) AS invoice_average
+        FROM invoices
+    )
+    SELECT 
+        c.client_id,
+        c.name,
+        (SELECT SUM(invoice_total) FROM invoices WHERE client_id = c.client_id) AS total_sales,
+        (SELECT invoice_average FROM invoice_stats) AS average,
+        (SELECT SUM(invoice_total) FROM invoices WHERE client_id = c.client_id) - (SELECT invoice_average FROM invoice_stats) AS difference
+    FROM clients c;
+    ```
+
+## Derived Table with Subqueries
+```sql
+SELECT *
+FROM (
+    SELECT 
+        client_id,
+        name,
+        (SELECT SUM(invoice_total) FROM invoices WHERE client_id = c.client_id) AS total_sales,
+        (SELECT AVG(invoice_total) FROM invoices) AS average,
+        (SELECT total_sales - average) AS difference
+    FROM clients c
+) AS sales_summary
+WHERE total_sales IS NOT NULL;
+```
+
+### Concepts: Derived Table, Subqueries in SELECT
+- **Definition**: A derived table is a subquery in the `FROM` clause, treated as a temporary table with an alias (e.g., `sales_summary`).
+- **Correlated Subquery**: Computes client-specific totals.
+- **Usage**: Wraps a query with subqueries to filter results (e.g., excluding clients with no sales).
+- **Correctness**: The derived table is valid, but the `difference` subquery is incorrect due to invalid alias referencing. The `WHERE` clause correctly filters non-`NULL` `total_sales`.
+- **Clarity**: The derived table adds structure, but the `difference` error reduces clarity.
+- **Potential Issues**:
+  - The `difference` subquery fails.
+  - Correlated subqueries are inefficient for large datasets.
+- **Best Practices**:
+  - Use a CTE or join for aggregates to avoid repeated subquery execution.
+  - Compute differences directly in the outer query.
+  - Example:
+    ```sql
+    WITH invoice_stats AS (
+        SELECT AVG(invoice_total) AS invoice_average
+        FROM invoices
+    )
+    SELECT client_id, name, total_sales, average, total_sales - average AS difference
+    FROM (
+        SELECT 
+            c.client_id,
+            c.name,
+            (SELECT SUM(invoice_total) FROM invoices WHERE client_id = c.client_id) AS total_sales,
+            (SELECT invoice_average FROM invoice_stats) AS average
+        FROM clients c
+    ) AS sales_summary
+    WHERE total_sales IS NOT NULL;
+    ```
+
+## General Recommendations
+- **Consistency**: Use consistent capitalization for SQL keywords (e.g., `SELECT`, `FROM`) and table/column names.
+- **Clarity**: Avoid `SELECT *`; specify columns explicitly. Use `IN` instead of `ANY`/`SOME` for readability.
+- **Performance**: Replace correlated subqueries with joins or CTEs for large datasets. Ensure indexes on join and filter columns (e.g., `client_id`, `product_id`).
+- **NULL Handling**: Handle `NULL` in subqueries with `COALESCE` or `EXISTS`. Prefer `NOT EXISTS` over `NOT IN` for `NULL`-safe logic.
+- **Subquery Efficiency**: Use `SELECT 1` in `EXISTS`/`NOT EXISTS` subqueries, as the result content is irrelevant. Avoid referencing column aliases in subqueries.
+- **Context**: Include `USE` statements to specify the database context.
