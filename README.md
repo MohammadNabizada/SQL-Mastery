@@ -2137,3 +2137,8 @@ WHERE total_sales IS NOT NULL;
 - **NULL Handling**: Handle `NULL` in subqueries with `COALESCE` or `EXISTS`. Prefer `NOT EXISTS` over `NOT IN` for `NULL`-safe logic.
 - **Subquery Efficiency**: Use `SELECT 1` in `EXISTS`/`NOT EXISTS` subqueries, as the result content is irrelevant. Avoid referencing column aliases in subqueries.
 - **Context**: Include `USE` statements to specify the database context.
+
+
+
+
+50
