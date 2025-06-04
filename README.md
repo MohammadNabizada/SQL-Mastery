@@ -49,6 +49,19 @@ Documenting my **45-day challenge** to master SQL through:
 - [EXISTS and NOT EXISTS](#exists-and-not-exists)
 - [Subqueries in SELECT Clause](#subqueries-in-select-clause)
 - [Derived Tables](#derived-tables)
+- [Numerical Functions](#numerical-functions)
+- [String Functions](#string-functions)
+- [Practical String Application](#practical-string-application)
+- [Date/Time Functions](#datetime-functions)
+- [Overall Assessment](#overall-assessment)
+- [Additional Examples](#additional-examples)
+- [Overview](#overview)
+- [Numerical Functions](#numerical-functions)
+- [String Functions](#string-functions)
+- [Practical String Application](#practical-string-application)
+- [Date/Time Functions](#datetime-functions)
+- [Overall Assessment](#overall-assessment)
+- [Additional Examples](#additional-examples)
 
 
 ## 🗂 Daily Logs
@@ -2141,4 +2154,146 @@ WHERE total_sales IS NOT NULL;
 
 
 
-50
+
+## Overview
+The provided SQL code demonstrates a variety of MySQL functions for numerical, string, and date/time operations, along with a practical query using the `sql_store` database. This review evaluates the code’s strengths, suggests improvements, and provides additional examples. The table below summarizes the functions covered, their categories, descriptions, and examples from the code.
+
+| Function | Category | Description | Example |
+|----------|----------|-------------|---------|
+| `ROUND` | Numerical | Rounds a number to specified decimals or nearest integer | `SELECT ROUND(5.73)`, `SELECT ROUND(5.73,1)`, `SELECT ROUND(5.73423,2)` |
+| `TRUNCATE` | Numerical | Truncates a number to specified decimals | `SELECT TRUNCATE(5.64223,2)` |
+| `CEILING` | Numerical | Rounds up to next integer | `SELECT CEILING(5.2)` |
+| `FLOOR` | Numerical | Rounds down to previous integer | `select floor(5.2)` |
+| `ABS` | Numerical | Returns absolute value | `SELECT ABS(-5.3)` |
+| `RAND` | Numerical | Generates random float (0 to 1) | `SELECT RAND()` |
+| `LENGTH` | String | Returns string length | `SELECT LENGTH('SKI')` |
+| `UPPER` | String | Converts string to uppercase | `SELECT UPPER('SKY')` |
+| `LOWER` | String | Converts string to lowercase | `SELECT LOWER('Sky')` |
+| `LTRIM` | String | Removes leading spaces | `SELECT LTRIM('   SKY')` |
+| `RTRIM` | String | Removes trailing spaces | `SELECT RTRIM('SKY  ')` |
+| `LEFT` | String | Extracts leftmost characters | `SELECT LEFT('KINDERGARDEN',4)` |
+| `RIGHT` | String | Extracts rightmost characters | `SELECT RIGHT('KINDERGARDEN',3)` |
+| `SUBSTRING` | String | Extracts substring from given position | `SELECT SUBSTRING('KINDERGARDEN',3,5)` |
+| `LOCATE` | String | Finds position of substring | `SELECT LOCATE('n','kindergarden')`, `SELECT LOCATE('garten','Kindergarten')` |
+| `REPLACE` | String | Replaces substring | `SELECT REPLACE('Kindergarten','garten','garden')` |
+| `CONCAT` | String | Concatenates strings | `SELECT CONCAT('first_name','last_name')` |
+| `NOW` | Date/Time | Returns current timestamp | `SELECT NOW()` |
+| `CURDATE` | Date/Time | Returns current date | `SELECT CURDATE()` |
+| `CURTIME` | Date/Time | Returns current time | `SELECT CURTIME()` |
+| `YEAR` | Date/Time | Extracts year from date | `SELECT YEAR(NOW())` |
+| `HOUR` | Date/Time | Extracts hour from time | `SELECT HOUR(NOW())` |
+| `SECOND` | Date/Time | Extracts second from time | `SELECT SECOND(NOW())` |
+| `DAYNAME` | Date/Time | Returns day name | `SELECT DAYNAME(NOW())` |
+| `MONTHNAME` | Date/Time | Returns month name | `SELECT MONTHNAME(NOW())` |
+| `EXTRACT` | Date/Time | Extracts part of date | `SELECT EXTRACT(YEAR FROM NOW()) AS YEAR` |
+| `DATE_ADD` | Date/Time | Adds interval to date | `SELECT DATE_ADD(NOW(), INTERVAL 2 DAY)` |
+| `DATE_SUB` | Date/Time | Subtracts interval from date | `SELECT DATE_SUB(NOW(), INTERVAL 1 YEAR)` |
+| `DATEDIFF` | Date/Time | Returns days between dates | `SELECT DATEDIFF('2025-01-05','2019-01-01')`, `SELECT DATEDIFF('2025-01-05 7:00','2019-01-01 10:00')` |
+| `TIME_TO_SEC` | Date/Time | Converts time to seconds | `SELECT TIME_TO_SEC('09:00') - TIME_TO_SEC('09:02')` |
+
+## Numerical Functions
+The code includes:
+- `ROUND(5.73)`, `ROUND(5.73,1)`, `ROUND(5.73423,2)`: Outputs `6`, `5.7`, `5.73`.
+- `TRUNCATE(5.64223,2)`: Outputs `5.64`.
+- `CEILING(5.2)`: Outputs `6`.
+- `FLOOR(5.2)`: Outputs `5`.
+- `ABS(-5.3)`: Outputs `5.3`.
+- `RAND()`: Outputs random float (e.g., `0.7234`).
+
+**Strengths**:
+- Covers essential numerical operations with clear examples.
+- Shows `ROUND` with different precision levels.
+
+**Improvements**:
+- Add semicolons (e.g., `SELECT ROUND(5.73);`).
+- Use uppercase keywords (e.g., `SELECT FLOOR(5.2)`).
+- Include edge case: `SELECT ROUND(NULL)` (returns `NULL`).
+
+## String Functions
+The code includes:
+- `LENGTH('SKI')`: Outputs `3`.
+- `UPPER('SKY')`, `LOWER('Sky')`: Outputs `SKY`, `sky`.
+- `LTRIM('   SKY')`, `RTRIM('SKY  ')`: Outputs `SKY`.
+- `LEFT('KINDERGARDEN',4)`, `RIGHT('KINDERGARDEN',3)`: Outputs `KIND`, `DEN`.
+- `SUBSTRING('KINDERGARDEN',3,5)`: Outputs `NDERG`.
+- `LOCATE('n','kindergarden')`, `LOCATE('garten','Kindergarten')`: Outputs `3`, `7`.
+- `REPLACE('Kindergarten','garten','garden')`: Outputs `Kindergarden`.
+- `CONCAT('first_name','last_name')`: Outputs `first_namelast_name`.
+
+**Strengths**:
+- Comprehensive string manipulation functions.
+- Clear examples, including single character and substring for `LOCATE`.
+
+**Improvements**:
+- Note `LOCATE` is case-insensitive in MySQL.
+- Add `NULL` example: `SELECT CONCAT(NULL, 'test')` (returns `test`).
+- Add semicolons.
+
+## Practical String Application
+The code includes:
+- `USE sql_store; SELECT CONCAT(first_name,' ',last_name) AS full_name FROM customers`: Combines names (e.g., `John Doe`).
+
+**Strengths**:
+- Practical use of `CONCAT` with database table.
+- Clear alias (`AS full_name`).
+
+**Improvements**:
+- Add schema comment (e.g., `-- Assumes customers table with first_name, last_name`).
+- Include semicolon: `SELECT CONCAT(first_name,' ',last_name) AS full_name FROM customers;`.
+
+## Date/Time Functions
+The code includes:
+- `NOW()`, `CURDATE()`, `CURTIME()`: Outputs current timestamp, date, time (e.g., `2025-06-04 22:38:00`, `2025-06-04`, `22:38:00`).
+- `YEAR(NOW())`, `HOUR(NOW())`, `SECOND(NOW())`: Outputs year, hour, second (e.g., `2025`, `22`, `38`).
+- `DAYNAME(NOW())`, `MONTHNAME(NOW())`: Outputs `Wednesday`, `June`.
+- `EXTRACT(YEAR FROM NOW()) AS YEAR`: Outputs `2025`.
+- `SELECT * FROM orders WHERE YEAR(order_date) = YEAR(NOW())`: Filters orders by current year.
+- `DATE_ADD(NOW(), INTERVAL 2 DAY)`: Adds 2 days.
+- `DATE_SUB(NOW(), INTERVAL 1 YEAR)`: Subtracts 1 year.
+- `DATEDIFF('2025-01-05','2019-01-01')`, `DATEDIFF('2025-01-05 7:00','2019-01-01 10:00')`: Outputs `2196` (time ignored).
+- `TIME_TO_SEC('09:00') - TIME_TO_SEC('09:02')`: Outputs `-120`.
+
+**Strengths**:
+- Wide range of date/time functions.
+- Practical query filtering orders.
+- `DATEDIFF` examples clarify date-only behavior.
+
+**Improvements**:
+- Add comments (e.g., `-- Returns seconds since midnight` for `TIME_TO_SEC`).
+- Clarify `DATEDIFF` ignores time.
+- Show edge case: `SELECT DATE_ADD(NULL, INTERVAL 1 DAY)` (returns `NULL`).
+
+## Overall Assessment
+**Strengths**:
+- Broad function coverage, ideal for learning SQL.
+- Simple examples clarify outputs.
+- Practical `sql_store` query shows real-world use.
+
+**Improvements**:
+- Add semicolons for compatibility.
+- Use uppercase SQL keywords consistently.
+- Include comments explaining functions.
+- Provide `sql_store` schema details.
+- Show edge cases (e.g., `NULL`, invalid inputs).
+
+## Additional Examples
+1. **Numerical and String Combination**:
+   ```sql
+   SELECT CONCAT('Total: $', ROUND(123.456, 1)); -- Returns 'Total: $123.5'
+   ```
+2. **NULL Handling**:
+   ```sql
+   SELECT LENGTH(NULL); -- Returns NULL
+   ```
+3. **Random Number Range**:
+   ```sql
+   SELECT FLOOR(RAND() * 50) + 1; -- Random integer between 1 and 50
+   ```
+4. **Formatted Date**:
+   ```sql
+   SELECT CONCAT(DAYNAME(NOW()), ', ', MONTHNAME(NOW()), ' ', YEAR(NOW())); -- E.g., 'Wednesday, June 2025'
+   ```
+5. **Recent Orders Filter**:
+   ```sql
+   SELECT * FROM orders WHERE order_date >= DATE_SUB(NOW(), INTERVAL 7 DAY); -- Orders from last 7 days
+   ```
