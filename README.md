@@ -62,6 +62,11 @@ Documenting my **45-day challenge** to master SQL through:
 - [Date/Time Functions](#datetime-functions)
 - [Overall Assessment](#overall-assessment)
 - [Additional Examples](#additional-examples)
+- [NULL Handling](#null-handling)
+- [String Concatenation](#string-concatenation)
+- [Conditional Logic](#conditional-logic)
+- [Aggregation and Grouping](#aggregation-and-grouping)
+- [Views](#views)
 
 
 ## 🗂 Daily Logs
@@ -2297,3 +2302,193 @@ The code includes:
    ```sql
    SELECT * FROM orders WHERE order_date >= DATE_SUB(NOW(), INTERVAL 7 DAY); -- Orders from last 7 days
    ```
+
+
+
+
+## NULL Handling
+**Related Queries**: 
+- `SELECT order_id, IFNULL(shipper_id, 'Not assigned') AS shipper FROM orders`
+- `SELECT order_id, COALESCE(shipper_id, comments, 'Not assigned') AS shipper FROM orders`
+- `SELECT concat(first_name, last_name) AS customer, ifnull(phone, 'Unknown') AS phone FROM customers`
+
+**Review**:
+- **Concept**: NULL handling replaces missing values with meaningful defaults using `IFNULL` (MySQL-specific) or `COALESCE` (standard SQL) to improve output clarity.
+- **Strengths**: 
+  - `IFNULL(shipper_id, 'Not assigned')` and `IFNULL(phone, 'Unknown')` provide clear defaults for missing data.
+  - `COALESCE(shipper_id, comments, 'Not assigned')` checks multiple columns, offering flexibility for fallback values.
+- **Improvements**:
+  - Use `COALESCE` over `IFNULL` for database portability (e.g., PostgreSQL, SQL Server).
+  - Ensure `comments` is a relevant fallback for `shipper_id` to avoid misleading output.
+  - Validate data types of fallback values for consistency.
+- **Best Practice**: Prefer `COALESCE` for cross-database compatibility. Ensure fallback values align with the column’s purpose.
+
+**Example**:
+```sql
+-- Display employee contact info, prioritizing mobile phone, then home phone, then 'No contact'
+SELECT 
+    employee_id,
+    COALESCE(mobile_phone, home_phone, 'No contact') AS contact_number
+FROM employees
+WHERE department_id = 10;
+```
+*Use Case*: This query retrieves contact information for employees in department 10, ensuring a phone number is always displayed by checking `mobile_phone`, then `home_phone`, and defaulting to 'No contact' if both are NULL.
+
+---
+
+## String Concatenation
+**Related Queries**:
+- `SELECT concat(first_name, last_name) AS customer, ifnull(phone, 'Unknown') AS phone FROM customers`
+- `SELECT CONCAT(first_name, ' ', last_name) AS customer, points, CASE ... END AS category FROM customers`
+
+**Review**:
+- **Concept**: Concatenation combines strings (e.g., names) for readable output using `CONCAT` or `CONCAT_WS` (with separator).
+- **Strengths**:
+  - The second query uses `CONCAT(first_name, ' ', last_name)` to create a properly spaced full name.
+  - Aliasing as `customer` clarifies the output.
+- **Improvements**:
+  - The first query lacks a space in `concat(first_name, last_name)`, causing names to run together (e.g., "JohnDoe"). Use `CONCAT(first_name, ' ', last_name)` or `CONCAT_WS`.
+  - Trim whitespace from inputs (e.g., `TRIM(first_name)`) to handle inconsistent data.
+- **Best Practice**: Use `CONCAT_WS` to simplify spacing and handle NULL values automatically.
+
+**Example**:
+```sql
+-- Create a formatted address string for customers
+SELECT 
+    customer_id,
+    CONCAT_WS(', ', TRIM(street), city, state, postal_code) AS full_address
+FROM customer_addresses
+WHERE country = 'USA';
+```
+*Use Case*: This query combines address components into a single string (e.g., "123 Main St, Springfield, IL, 62701") for customers in the USA, skipping NULL fields and ensuring proper comma separation.
+
+---
+
+## Conditional Logic
+**Related Queries**:
+- `SELECT order_id, order_date, IF(YEAR(order_date) = YEAR(CURRENT_DATE), 'Active', 'Archived') AS category FROM orders`
+- `SELECT product_id, name, COUNT(*) AS orders, IF(COUNT(*) > 1, 'Many times', 'Once') AS frequency FROM products JOIN order_items USING(product_id) GROUP BY product_id, name`
+- `SELECT order_id, CASE WHEN YEAR(order_date) = YEAR(CURRENT_DATE) THEN 'Active' ... END AS category FROM orders`
+- `SELECT CONCAT(first_name, ' ', last_name) AS customer, points, CASE WHEN points > 3000 THEN 'Gold' ... END AS category FROM customers`
+
+**Review**:
+- **Concept**: Conditional logic (`IF` and `CASE`) categorizes data based on conditions, enhancing report usability.
+- **Strengths**:
+  - `IF` queries provide simple binary categorization (e.g., 'Active'/'Archived', 'Many times'/'Once').
+  - `CASE` queries handle multiple conditions, such as order year categories ('Active', 'Last Year', 'Archived', 'Future') and customer tiers ('Gold', 'Silver', 'Bronze').
+  - The customer tier query uses `BETWEEN` and sorts by category (`ORDER BY category DESC`).
+- **Improvements**:
+  - Replace `NOW()` with `CURRENT_DATE` for portability (updated in the review).
+  - Fix the typo `ferquency` to `frequency`.
+  - Use consistent capitalization (e.g., 'Active' vs. 'active').
+  - Add secondary sorting (e.g., `ORDER BY category DESC, points DESC`) for customer tiers.
+  - Validate edge cases (e.g., negative `points`, future `order_date`).
+- **Best Practice**: Use `CASE` for multi-condition logic. Ensure consistent output formatting and validate condition boundaries.
+
+**Example**:
+```sql
+-- Categorize employees by years of service
+SELECT 
+    employee_id,
+    CONCAT_WS(' ', first_name, last_name) AS employee_name,
+    CASE 
+        WHEN DATEDIFF(CURRENT_DATE, hire_date) / 365 > 10 THEN 'Veteran'
+        WHEN DATEDIFF(CURRENT_DATE, hire_date) / 365 BETWEEN 5 AND 10 THEN 'Experienced'
+        ELSE 'New'
+    END AS service_category
+FROM employees
+ORDER BY service_category DESC, hire_date;
+```
+*Use Case*: This query categorizes employees based on years of service, sorting by category and hire date to prioritize long-serving employees within each category.
+
+---
+
+## Aggregation and Grouping
+**Related Queries**:
+- `SELECT product_id, name, COUNT(*) AS orders, IF(COUNT(*) > 1, 'Many times', 'Once') AS frequency FROM products JOIN order_items USING(product_id) GROUP BY product_id, name`
+- `CREATE VIEW sales_by_client AS SELECT c.client_id, c.name, SUM(invoice_total) AS total_sales FROM clients c JOIN invoices i USING (client_id) GROUP BY client_id, name`
+- `CREATE OR REPLACE VIEW Balance2 AS SELECT c.client_id, c.name, SUM(invoice_total - payment_total) AS balance FROM clients c JOIN invoices i USING(client_id) GROUP BY client_id, name`
+
+**Review**:
+- **Concept**: Aggregation (`COUNT`, `SUM`) summarizes data, with `GROUP BY` organizing results by categories.
+- **Strengths**:
+  - The product query uses `COUNT(*)` to tally orders, grouping by `product_id` and `name`.
+  - The `sales_by_client` view aggregates `invoice_total` for total sales per client.
+  - The `Balance2` view calculates outstanding balances using `SUM(invoice_total - payment_total)`.
+- **Improvements**:
+  - Fix the typo `ferquency` to `frequency`.
+  - Ensure `name` is unique in `sales_by_client` and `Balance2` views, or group by `client_id` alone.
+  - Add `ORDER BY` (e.g., `total_sales DESC`) if sorting is needed.
+  - Index `product_id`, `client_id`, `invoice_total`, and `payment_total` for performance.
+  - Validate non-NULL values for `invoice_total` and `payment_total`.
+- **Best Practice**: Match `GROUP BY` columns with selected columns. Index join and group columns for performance.
+
+**Example**:
+```sql
+-- Summarize total hours worked by department
+SELECT 
+    d.department_id,
+    d.department_name,
+    SUM(e.hours_worked) AS total_hours,
+    COUNT(DISTINCT e.employee_id) AS employee_count
+FROM departments d
+JOIN employee_records e USING (department_id)
+WHERE e.work_date >= '2025-01-01'
+GROUP BY d.department_id, d.department_name
+ORDER BY total_hours DESC;
+```
+*Use Case*: This query calculates total hours worked and the number of employees per department in 2025, sorting by total hours to identify high-workload departments.
+
+---
+
+## Views
+**Related Queries**:
+- `CREATE VIEW sales_by_client AS SELECT c.client_id, c.name, SUM(invoice_total) AS total_sales FROM clients c JOIN invoices i USING (client_id) GROUP BY client_id, name`
+- `SELECT client_id, name, total_sales FROM sales_by_client ORDER BY total_sales DESC`
+- `CREATE OR REPLACE VIEW Balance2 AS SELECT c.client_id, c.name, SUM(invoice_total - payment_total) AS balance FROM clients c JOIN invoices i USING(client_id) GROUP BY client_id, name`
+
+**Review**:
+- **Concept**: Views store query logic for reuse, simplifying complex queries and improving maintainability.
+- **Strengths**:
+  - `sales_by_client` simplifies total sales reporting.
+  - `Balance2` uses `CREATE OR REPLACE` for safe updates, calculating client balances.
+  - Querying `sales_by_client` with sorting leverages the view effectively.
+- **Improvements**:
+  - Replace `SELECT *` with explicit columns (`client_id`, `name`, `total_sales`) for clarity.
+  - Ensure `name` is unique or group by `client_id` alone in views.
+  - Add filters in `Balance2` (e.g., `WHERE invoice_total != payment_total`) for non-zero balances.
+  - Document views with comments for maintainability.
+- **Best Practice**: Use `CREATE OR REPLACE` for safe updates. List columns explicitly when querying views. Test dependent queries after view changes.
+
+**Example**:
+```sql
+-- Create a view for overdue invoices
+CREATE OR REPLACE VIEW overdue_invoices AS
+SELECT 
+    i.invoice_id,
+    c.name AS client_name,
+    i.invoice_total - i.payment_total AS outstanding_balance,
+    i.due_date
+FROM invoices i
+JOIN clients c USING (client_id)
+WHERE i.due_date < CURRENT_DATE
+AND i.invoice_total > i.payment_total;
+
+-- Query the view to find top overdue clients
+SELECT 
+    client_name,
+    SUM(outstanding_balance) AS total_overdue
+FROM overdue_invoices
+GROUP BY client_name
+ORDER BY total_overdue DESC;
+```
+*Use Case*: The view identifies overdue invoices, and the query summarizes total overdue amounts by client, helping prioritize collection efforts.
+
+---
+
+## General Recommendations
+- **Portability**: Use standard SQL (`COALESCE`, `CURRENT_DATE`) over MySQL-specific functions (`IFNULL`, `NOW()`).
+- **Performance**: Index columns in `JOIN`, `GROUP BY`, `WHERE`, or `ORDER BY` clauses.
+- **Consistency**: Fix typos (e.g., `ferquency`), use consistent capitalization, and format outputs uniformly.
+- **Validation**: Check for non-negative `points`, unique `name` in groups, and non-NULL aggregation inputs.
+- **Documentation**: Add comments to views and complex queries for clarity.
