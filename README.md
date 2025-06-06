@@ -67,6 +67,10 @@ Documenting my **45-day challenge** to master SQL through:
 - [Conditional Logic](#conditional-logic)
 - [Aggregation and Grouping](#aggregation-and-grouping)
 - [Views](#views)
+- [Updatable Views](#updatable-views)
+- [Updatable Views with CHECK OPTION](#updatable-views-with-check-option)
+- [Benefits of Views](#benefits-of-views)
+- [Stored Procedures](#stored-procedures)
 
 
 ## 🗂 Daily Logs
@@ -2492,3 +2496,120 @@ ORDER BY total_overdue DESC;
 - **Consistency**: Fix typos (e.g., `ferquency`), use consistent capitalization, and format outputs uniformly.
 - **Validation**: Check for non-negative `points`, unique `name` in groups, and non-NULL aggregation inputs.
 - **Documentation**: Add comments to views and complex queries for clarity.
+
+
+
+
+
+## Updatable Views
+### Explanation
+An updatable view in SQL is a view that allows modifications (INSERT, UPDATE, or DELETE) to the underlying base table through the view itself. For a view to be updatable, it must meet specific criteria, such as:
+- It must reference only one base table.
+- It should not include complex operations like GROUP BY, DISTINCT, or aggregate functions.
+- All non-nullable columns of the base table must be included or have default values.
+- The view must not include derived columns that cannot be mapped back to the base table in a straightforward way.
+
+In the provided example, the view `invoices_with_balance` is created from the `invoices` table, calculating the `balance` as a derived column (`invoice_total - payment_total`). This view is updatable because it references a single table (`invoices`) and includes columns that can be mapped directly to the base table, except for the calculated `balance`, which is not directly updatable.
+
+### Example
+```sql
+CREATE OR REPLACE VIEW invoices_with_balance AS
+SELECT
+    invoice_id,
+    number,
+    client_id,
+    invoice_total,
+    payment_total,
+    invoice_total - payment_total AS balance,
+    invoice_date,
+    due_date,
+    payment_date
+FROM invoices
+WHERE (invoice_total - payment_total) > 0;
+
+UPDATE invoices_with_balance
+SET payment_total = invoice_total
+WHERE invoice_id = 2;
+```
+In this example, the view filters invoices with a positive balance. The `UPDATE` statement sets `payment_total` equal to `invoice_total` for `invoice_id = 2`, effectively updating the underlying `invoices` table. However, since the view has a `WHERE` clause, updating `payment_total` to equal `invoice_total` makes the balance zero, causing the row to disappear from the view (but it remains in the base table).
+
+## Updatable Views with CHECK OPTION
+### Explanation
+The `WITH CHECK OPTION` clause ensures that any modifications (INSERT or UPDATE) made through the view conform to the view's `WHERE` condition. If an update or insert would result in a row that no longer satisfies the view’s condition, the operation is rejected. This is useful for maintaining data integrity within the view’s scope.
+
+In the provided example, the view `invoices_with_balance` is defined with `WITH CHECK OPTION`. When updating `payment_total` to equal `invoice_total`, the operation is rejected if it would cause the balance to become zero or negative, as this violates the view’s condition `(invoice_total - payment_total) > 0`.
+
+### Example
+```sql
+CREATE OR REPLACE VIEW invoices_with_balance AS
+SELECT
+    invoice_id,
+    number,
+    client_id,
+    invoice_total,
+    payment_total,
+    invoice_total - payment_total AS balance,
+    invoice_date,
+    due_date,
+    payment_date
+FROM invoices
+WHERE (invoice_total - payment_total) > 0
+WITH CHECK OPTION;
+
+UPDATE invoices_with_balance
+SET payment_total = invoice_total
+WHERE invoice_id = 3;
+```
+Here, the `UPDATE` statement attempts to set `payment_total` equal to `invoice_total` for `invoice_id = 3`. Since this would result in a balance of zero, which violates the `WHERE` condition, the operation is rejected, and an error is raised.
+
+## Benefits of Views
+### Explanation
+Views in SQL offer several advantages:
+- **Simplification**: Views simplify complex queries by providing a virtual table that encapsulates the logic, making it easier to query data.
+- **Security**: Views can restrict access to specific columns or rows, hiding sensitive data from users who only query the view.
+- **Data Abstraction**: Views provide a layer of abstraction, allowing changes to the underlying table structure without affecting queries that use the view.
+- **Consistency**: Views ensure consistent query results by reusing predefined logic.
+- **Updatability**: Updatable views allow modifications to the base table, as shown in the examples above, under certain conditions.
+
+### Example
+```sql
+-- Accessing simplified data through a view
+SELECT * FROM invoices_with_balance WHERE balance > 1000;
+```
+This query retrieves invoices with a balance greater than 1000 without needing to rewrite the balance calculation or the `WHERE` condition, demonstrating simplification and consistency.
+
+## Stored Procedures
+### Explanation
+A stored procedure is a precompiled collection of SQL statements stored in the database under a name and executed as a single unit. Stored procedures can:
+- Accept parameters.
+- Encapsulate complex logic, including multiple SQL statements.
+- Improve performance by reducing network traffic and enabling reuse.
+- Enhance security by restricting direct table access and allowing controlled operations.
+
+In the provided examples, `get_clients` retrieves all rows from the `clients` table, and `get_balance` retrieves rows from the `invoices_with_balance` view where the balance is positive. The `DELIMITER` command is used to change the statement delimiter (from `;` to `$$`) to allow the procedure definition to include semicolons.
+
+### Example
+```sql
+DELIMITER $$
+CREATE PROCEDURE get_clients()
+BEGIN
+    SELECT * FROM clients;
+END$$
+
+DELIMITER ;
+
+CALL get_clients();
+
+DELIMITER $$
+CREATE PROCEDURE get_balance()
+BEGIN
+    SELECT * FROM invoices_with_balance
+    WHERE balance > 0;
+END$$
+
+DELIMITER ;
+CALL get_balance();
+```
+- The `get_clients` procedure retrieves all client records when called with `CALL get_clients();`.
+- The `get_balance` procedure retrieves invoices with a positive balance from the `invoices_with_balance` view when called with `CALL get_balance();`. These procedures encapsulate the queries for reuse and simplify execution.
+
