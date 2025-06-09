@@ -71,7 +71,16 @@ Documenting my **45-day challenge** to master SQL through:
 - [Updatable Views with CHECK OPTION](#updatable-views-with-check-option)
 - [Benefits of Views](#benefits-of-views)
 - [Stored Procedures](#stored-procedures)
-
+- [Delimiter Usage](#delimiter-usage)
+- [Parameterized Queries](#parameterized-queries)
+- [Conditional Logic](#conditional-logic)
+- [NULL Handling with IFNULL](#null-handling-with-ifnull)
+- [Error Handling with SIGNAL](#error-handling-with-signal)
+- [Table Aliases](#table-aliases)
+- [Data Type Specification](#data-type-specification)
+- [Definer Clause](#definer-clause)
+- [Dynamic Data Modification](#dynamic-data-modification)
+- [Query Filtering](#query-filtering)
 
 ## 🗂 Daily Logs
 ### **Day 1: Install and config MySql**  
@@ -2613,3 +2622,239 @@ CALL get_balance();
 - The `get_clients` procedure retrieves all client records when called with `CALL get_clients();`.
 - The `get_balance` procedure retrieves invoices with a positive balance from the `invoices_with_balance` view when called with `CALL get_balance();`. These procedures encapsulate the queries for reuse and simplify execution.
 
+
+
+
+## Stored Procedures
+**Concept**: Stored procedures are precompiled database objects that encapsulate SQL statements into reusable units, stored in the database, and invoked by name, often with parameters, to perform tasks like querying or updating data.
+
+**Significance**: They enhance modularity, reusability, and security by centralizing logic, reducing code duplication, and controlling access through permissions.
+
+**In the Code**: Procedures like `get_clients` and `make_payment` encapsulate tasks such as retrieving all clients or updating invoices.
+
+**Example**:
+```sql
+DELIMITER $$
+CREATE PROCEDURE list_employees()
+BEGIN
+    SELECT employee_id, first_name, last_name FROM employees;
+END $$
+DELIMITER ;
+CALL list_employees();
+```
+*Explanation*: This procedure retrieves employee details from an `employees` table, encapsulating the query for reuse.
+
+## Delimiter Usage
+**Concept**: MySQL uses a semicolon (`;`) as the default statement terminator. The `DELIMITER` command changes it (e.g., to `$$`) to allow multiple statements within a procedure without premature termination.
+
+**Significance**: Prevents syntax errors when defining procedures with multiple statements.
+
+**In the Code**: `DELIMITER $$` and `DELIMITER ;` are used to define procedure boundaries.
+
+**Example**:
+```sql
+DELIMITER $$
+CREATE PROCEDURE count_orders()
+BEGIN
+    DECLARE total INT;
+    SELECT COUNT(*) INTO total FROM orders;
+    SELECT total AS order_count;
+END $$
+DELIMITER ;
+CALL count_orders();
+```
+*Explanation*: `DELIMITER $$` allows the procedure to include multiple statements, such as variable declaration and queries.
+
+## Parameterized Queries
+**Concept**: Stored procedures can accept input parameters, enabling dynamic query execution based on user-provided values.
+
+**Significance**: Parameters make procedures flexible, allowing varied inputs without altering the SQL logic.
+
+**In the Code**: `get_clients_by_state(state CHAR(2))` filters clients by a state parameter.
+
+**Example**:
+```sql
+DELIMITER $$
+CREATE PROCEDURE get_orders_by_customer(customer_id INT)
+BEGIN
+    SELECT order_id, order_date, total_amount 
+    FROM orders 
+    WHERE customer_id = customer_id;
+END $$
+DELIMITER ;
+CALL get_orders_by_customer(101);
+```
+*Explanation*: The procedure retrieves orders for a specific customer ID, dynamically filtering based on the input.
+
+## Conditional Logic
+**Concept**: SQL stored procedures use control structures like `IF` to execute different logic paths based on conditions.
+
+**Significance**: Enables decision-making, such as setting defaults or validating inputs.
+
+**In the Code**: `get_client_by_state` uses `IF state IS NULL THEN SET state = 'CA'; END IF` for default values.
+
+**Example**:
+```sql
+DELIMITER $$
+CREATE PROCEDURE set_discount(order_id INT, discount_rate DECIMAL(5,2))
+BEGIN
+    IF discount_rate > 0.5 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Discount rate cannot exceed 50%';
+    ELSE
+        UPDATE orders 
+        SET discount = discount_rate 
+        WHERE order_id = order_id;
+    END IF;
+END $$
+DELIMITER ;
+CALL set_discount(1001, 0.3);
+```
+*Explanation*: The procedure applies a discount only if it’s 50% or less, otherwise raising an error.
+
+## NULL Handling with IFNULL
+**Concept**: The `IFNULL` function returns a fallback value if an expression is `NULL`, otherwise returns the expression.
+
+**Significance**: Ensures robust handling of `NULL` inputs in dynamic queries.
+
+**In the Code**: `get_payments` uses `IFNULL(client_id, p.client_id)` to avoid filtering if `client_id` is `NULL`.
+
+**Example**:
+```sql
+DELIMITER $$
+CREATE PROCEDURE get_products_by_category(category_id INT)
+BEGIN
+    SELECT product_id, name, price 
+    FROM products 
+    WHERE category_id = IFNULL(category_id, category_id);
+END $$
+DELIMITER ;
+CALL get_products_by_category(NULL);
+```
+*Explanation*: If `category_id` is `NULL`, the procedure returns all products by effectively bypassing the filter.
+
+## Error Handling with SIGNAL
+**Concept**: The `SIGNAL` statement raises a custom error with a specific SQL state and message, stopping execution for invalid conditions.
+
+**Significance**: Enforces business rules and maintains data integrity.
+
+**In the Code**: `make_payment` uses `SIGNAL SQLSTATE '22003'` to reject non-positive payment amounts.
+
+**Example**:
+```sql
+DELIMITER $$
+CREATE PROCEDURE update_stock(product_id INT, quantity INT)
+BEGIN
+    IF quantity < 0 THEN
+        SIGNAL SQLSTATE '22003' SET MESSAGE_TEXT = 'Quantity cannot be negative';
+    END IF;
+    UPDATE products 
+    SET stock = stock - quantity 
+    WHERE product_id = product_id;
+END $$
+DELIMITER ;
+CALL update_stock(101, -5);
+```
+*Explanation*: The procedure prevents negative stock updates by raising an error.
+
+## Table Aliases
+**Concept**: Table aliases assign shorthand identifiers to tables in queries, simplifying column references.
+
+**Significance**: Enhances query readability and reduces typing in complex queries.
+
+**In the Code**: `clients c` and `invoices i` are used as aliases.
+
+**Example**:
+```sql
+DELIMITER $$
+CREATE PROCEDURE get_customer_orders(customer_id INT)
+BEGIN
+    SELECT o.order_id, o.order_date, c.name 
+    FROM orders o 
+    JOIN customers c ON o.customer_id = c.customer_id
+    WHERE o.customer_id = customer_id;
+END $$
+DELIMITER ;
+CALL get_customer_orders(101);
+```
+*Explanation*: Aliases `o` and `c` make the join query more concise and readable.
+
+## Data Type Specification
+**Concept**: Parameters and variables use specific data types to enforce data consistency.
+
+**Significance**: Prevents invalid data formats and optimizes storage/performance.
+
+**In the Code**: `state CHAR(2)`, `payment_amount DECIMAL(9,2)` define precise types.
+
+**Example**:
+```sql
+DELIMITER $$
+CREATE PROCEDURE add_employee(first_name VARCHAR(50), salary DECIMAL(10,2))
+BEGIN
+    INSERT INTO employees (first_name, salary) 
+    VALUES (first_name, salary);
+END $$
+DELIMITER ;
+CALL add_employee('John Doe', 50000.00);
+```
+*Explanation*: `VARCHAR(50)` and `DECIMAL(10,2)` ensure proper formats for name and salary.
+
+## Definer Clause
+**Concept**: The `DEFINER` clause specifies the user account under which a procedure executes, controlling permissions.
+
+**Significance**: Enhances security by aligning operations with specific access privileges.
+
+**In the Code**: `make_payment` uses `DEFINER=`root`@`localhost`` for execution context.
+
+**Example**:
+```sql
+DELIMITER $$
+CREATE DEFINER=`admin`@`localhost` PROCEDURE delete_order(order_id INT)
+BEGIN
+    DELETE FROM orders WHERE order_id = order_id;
+END $$
+DELIMITER ;
+CALL delete_order(1001);
+```
+*Explanation*: The procedure executes with `admin@localhost` privileges, ensuring only authorized deletions.
+
+## Dynamic Data Modification
+**Concept**: Stored procedures can dynamically modify data using statements like `UPDATE`, based on parameters.
+
+**Significance**: Ensures controlled, consistent data updates.
+
+**In the Code**: `make_payment` updates `invoices` with payment details.
+
+**Example**:
+```sql
+DELIMITER $$
+CREATE PROCEDURE update_customer_email(customer_id INT, new_email VARCHAR(100))
+BEGIN
+    UPDATE customers 
+    SET email = new_email 
+    WHERE customer_id = customer_id;
+END $$
+DELIMITER ;
+CALL update_customer_email(101, 'new.email@example.com');
+```
+*Explanation*: The procedure dynamically updates a customer’s email based on input.
+
+## Query Filtering
+**Concept**: The `WHERE` clause filters query results based on conditions, often using parameters.
+
+**Significance**: Retrieves only relevant data, improving efficiency.
+
+**In the Code**: `get_clients_by_state` uses `WHERE c.state = state` for filtering.
+
+**Example**:
+```sql
+DELIMITER $$
+CREATE PROCEDURE get_active_subscriptions(status VARCHAR(10))
+BEGIN
+    SELECT subscription_id, customer_id 
+    FROM subscriptions 
+    WHERE status = status;
+END $$
+DELIMITER ;
+CALL get_active_subscriptions('active');
+```
+*Explanation*: The procedure filters subscriptions by a specified status.
