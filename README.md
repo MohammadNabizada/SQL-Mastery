@@ -81,7 +81,7 @@ Documenting my **45-day challenge** to master SQL through:
 - [Definer Clause](#definer-clause)
 - [Dynamic Data Modification](#dynamic-data-modification)
 - [Query Filtering](#query-filtering)
-
+ [Numeric Functions](#1-numeric-functions)
 ## 🗂 Daily Logs
 ### **Day 1: Install and config MySql**  
 📝 **Notes**:  
@@ -2858,3 +2858,201 @@ DELIMITER ;
 CALL get_active_subscriptions('active');
 ```
 *Explanation*: The procedure filters subscriptions by a specified status.
+
+
+ Numeric Functions
+
+Numeric functions perform mathematical operations on numbers, including rounding, truncation, and absolute values.
+1.1 ROUND()
+
+Rounds a number to the nearest integer or a specified number of decimal places.
+Syntax:
+sql
+
+ROUND(number, [decimal_places])
+
+Examples:
+sql
+
+SELECT ROUND(5.73);       → 6 (rounds to nearest integer)
+SELECT ROUND(5.73, 1);    → 5.7 (rounds to 1 decimal place)
+SELECT ROUND(5.73423, 2); → 5.73 (rounds to 2 decimal places)
+
+When to Use:
+
+    Financial calculations where rounding is required (e.g., currency values).
+
+    Data reporting where precision control is needed.
+
+1.2 TRUNCATE()
+
+Cuts off a number at a specified decimal place without rounding.
+Syntax:
+sql
+
+TRUNCATE(number, decimal_places)
+
+Examples:
+sql
+
+SELECT TRUNCATE(5.64223, 2); → 5.64 (keeps 2 decimal places, drops the rest)
+SELECT TRUNCATE(5.699, 1);   → 5.6 (does NOT round up)
+
+When to Use:
+
+    When exact truncation is needed (e.g., tax calculations where rounding is not allowed).
+
+1.3 CEILING() and FLOOR()
+
+    CEILING(): Rounds a number up to the nearest integer.
+
+    FLOOR(): Rounds a number down to the nearest integer.
+
+Examples:
+sql
+
+SELECT CEILING(5.2); → 6 (always rounds up)
+SELECT FLOOR(5.9);   → 5 (always rounds down)
+
+When to Use:
+
+    CEILING(): When you need to ensure a minimum value (e.g., pricing strategies).
+
+    FLOOR(): When you need to discard fractional parts (e.g., age calculations).
+
+1.4 ABS() and RAND()
+
+    ABS(): Returns the absolute (positive) value of a number.
+
+    RAND(): Generates a random float between 0 and 1.
+
+Examples:
+sql
+
+SELECT ABS(-5.3); → 5.3 (removes negative sign)
+SELECT RAND();    → 0.8732156 (random value)
+
+When to Use:
+
+    ABS(): When working with differences (e.g., distance calculations).
+
+    RAND(): For sampling random records (e.g., SELECT * FROM users ORDER BY RAND() LIMIT 5;).
+
+2. String Functions
+
+String functions manipulate text data, such as extracting substrings, changing case, and trimming whitespace.
+2.1 Basic String Operations
+Function	Description	Example
+LENGTH()	Returns string length	SELECT LENGTH('SKY'); → 3
+UPPER()	Converts to uppercase	SELECT UPPER('Sky'); → 'SKY'
+LOWER()	Converts to lowercase	SELECT LOWER('Sky'); → 'sky'
+LTRIM()	Removes leading spaces	SELECT LTRIM(' SKY'); → 'SKY'
+RTRIM()	Removes trailing spaces	SELECT RTRIM('SKY '); → 'SKY'
+2.2 Substring Extraction
+
+Extracts parts of a string based on position.
+LEFT() and RIGHT()
+```sql
+
+SELECT LEFT('KINDERGARDEN', 4); → 'KIND' (first 4 characters)
+SELECT RIGHT('KINDERGARDEN', 3); → 'DEN' (last 3 characters)
+```
+SUBSTRING()
+
+Extracts from a specified position.
+```sql
+
+SELECT SUBSTRING('KINDERGARDEN', 3, 5); → 'NDERG' (start at 3rd char, take 5 chars)
+```
+When to Use:
+
+    Extracting initials from names (LEFT(name, 1)).
+
+    Parsing codes (e.g., first 3 letters of a product ID).
+
+2.3 String Search & Replacement
+LOCATE()
+
+Finds the position of a substring.
+```sql
+
+SELECT LOCATE('n', 'kindergarden'); → 2 (first 'n' is at position 2)
+```
+REPLACE()
+
+Replaces occurrences of a substring.
+```sql
+
+SELECT REPLACE('Kindergarten', 'garten', 'garden'); → 'Kindergarten' → 'Kindergarden'
+```
+When to Use:
+
+    Fixing typos in data (REPLACE(description, 'old', 'new')).
+
+    Extracting parts of URLs (LOCATE('/', url)).
+
+3. Date/Time Functions
+
+Crucial for handling dates, times, and intervals.
+3.1 Current Date & Time
+```sql
+
+SELECT NOW();      → '2025-07-01 14:30:45' (current timestamp)
+SELECT CURDATE();  → '2025-07-01' (date only)
+SELECT CURTIME();  → '14:30:45' (time only)
+```
+3.2 Extracting Date Parts
+```sql
+
+SELECT YEAR(NOW());        → 2025
+SELECT MONTHNAME(NOW());   → 'July'
+SELECT DAYNAME(NOW());     → 'Tuesday'
+```
+3.3 Date Arithmetic
+Adding/Subtracting Time
+```sql
+
+SELECT DATE_ADD(NOW(), INTERVAL 2 DAY);  → Adds 2 days
+SELECT DATE_SUB(NOW(), INTERVAL 1 YEAR); → Subtracts 1 year
+```
+Date Differences
+```sql
+
+SELECT DATEDIFF('2025-01-05', '2019-01-01'); → 2196 days between dates
+```
+When to Use:
+
+    Calculating age (DATEDIFF(NOW(), birth_date)).
+
+    Generating reports for the last 30 days (WHERE order_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)).
+
+4. Practical SQL Examples
+4.1 Customer Full Name Concatenation
+```sql
+
+SELECT CONCAT(first_name, ' ', last_name) AS full_name
+FROM customers;
+```
+4.2 Filtering Current Year Orders
+```sql
+
+SELECT * FROM orders 
+WHERE YEAR(order_date) = YEAR(NOW());
+```
+4.3 Time Difference in Seconds
+```sql
+
+SELECT TIME_TO_SEC('09:00') - TIME_TO_SEC('09:02'); → -120 (2 minutes difference)
+```
+5. Key Takeaways
+Category	Key Functions	Common Use Cases
+Numeric	ROUND(), TRUNCATE(), ABS()	Financial calculations, data cleaning
+String	CONCAT(), SUBSTRING(), REPLACE()	Data formatting, text extraction
+Date/Time	NOW(), DATE_ADD(), DATEDIFF()	Age calculation, time-based filtering
+Best Practices
+
+✔ Use TRUNCATE() instead of ROUND() when exact decimal cutting is needed.
+✔ Always trim (LTRIM()/RTRIM()) user inputs to avoid whitespace issues.
+✔ For date comparisons, use YEAR(date_column) = YEAR(NOW()) instead of hardcoding years.
+
+
